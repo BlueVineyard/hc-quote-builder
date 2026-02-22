@@ -32,8 +32,8 @@
 | - | ----- | ------ |
 | 1 | Plugin Bootstrap + CPT Registration | ✅ Complete |
 | 2 | Plugin Settings Page | ✅ Complete |
-| 3 | hc-containers Admin Meta Box | 🔄 In Progress |
-| 4 | hc-quote-configs Admin Screen | 🔲 Not Started |
+| 3 | hc-containers Admin Meta Box | ✅ Complete |
+| 4 | hc-quote-configs Admin Screen | 🔄 In Progress |
 | 5 | Product Page Template | 🔲 Not Started |
 | 6 | Product Grid + Lease Grid Shortcodes | 🔲 Not Started |
 | 7 | Quote Builder — Frame 1 | 🔲 Not Started |
@@ -310,7 +310,7 @@ if ( empty( hcqb_get_setting( 'google_maps_api_key' ) ) ) {
 
 ## Stage 3 — hc-containers Admin Meta Box
 
-**Status:** 🔲 Not Started
+**Status:** ✅ Complete — 2026-02-22
 **Depends on:** Stage 1
 **Architecture ref:** §5.1 hc-containers Admin Edit Screen
 

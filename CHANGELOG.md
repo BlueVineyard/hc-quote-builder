@@ -58,11 +58,17 @@ Versioning: `HCQB_VERSION` minor-bumped on each stage completion — Stage 1 →
 
 ---
 
-### [Stage 3] — Pending
-**hc-containers Admin Meta Box**
-- [ ] `admin/class-hcqb-metabox-container.php`
-- [ ] `admin/class-hcqb-admin-assets.php`
-- [ ] `assets/js/admin/hcqb-admin-container.js`
+### [Stage 3] — 2026-02-22
+**hc-containers Admin Meta Box** | `HCQB_VERSION` → `1.2.0`
+
+**Added**
+- [x] `admin/class-hcqb-metabox-container.php` — Tabbed meta box on the `hc-containers` edit screen; Tab 1 (Product Info): short description, base price, star rating, review count, gallery repeater, features repeater (icon + label), `wp_editor` product description, additional notes, plan document file picker, shipping details link; Tab 2 (Lease Info): enable lease toggle, lease price + label, `wp_editor` lease terms, standard layout title + `wp_editor` layout description, optional extras repeater (label + weekly price), enquiry button label; `save_post` handler with nonce, capability, autosave, and revision guards; full sanitisation (`absint`, `sanitize_text_field`, `sanitize_textarea_field`, `wp_kses_post`, `esc_url_raw`, `floatval`)
+- [x] `admin/class-hcqb-admin-assets.php` — Conditional asset enqueue class; `enqueue_for_container()` guards on `post.php`/`post-new.php` + `hc-containers` post type; calls `wp_enqueue_media()`; commented stubs for Stage 4 config screen and Stage 10 submissions view
+- [x] `assets/js/admin/hcqb-admin-container.js` — Tab switching; gallery (wp.media multi-select, drag reorder, remove); features repeater (add/remove/drag/icon picker via wp.media single-image); plan document picker (wp.media any file, remove); lease extras repeater (add/remove/drag); shared HTML5 drag-and-drop reorder utility
+
+**Changed**
+- [x] `assets/css/admin/hcqb-admin-global.css` — Metabox panel hiding switched from `display:none` to off-screen positioning so TinyMCE editors inside inactive panels can initialise on page load; added gallery grid, gallery item drag state, icon picker, file picker, extras unit label, and meta table spacing styles
+- [x] `includes/class-hcqb-plugin.php` — Stage 3 hooks activated: `add_meta_boxes` → `HCQB_Metabox_Container::register`, `save_post` → `HCQB_Metabox_Container::save`, `admin_enqueue_scripts` → `HCQB_Admin_Assets::enqueue_for_container`; Stage 3 `require_once` statements uncommented
 
 ---
 

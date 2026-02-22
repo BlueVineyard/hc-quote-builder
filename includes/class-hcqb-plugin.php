@@ -42,8 +42,8 @@ class HCQB_Plugin {
 
 		// Stage 3–4 — Admin classes (loaded only in admin context)
 		if ( is_admin() ) {
-			// require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-admin-assets.php';
-			// require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-container.php';
+			require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-admin-assets.php';
+			require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-container.php';
 			// require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-config.php';
 		}
 
@@ -78,9 +78,9 @@ class HCQB_Plugin {
 		add_action( 'admin_enqueue_scripts', [ HCQB_Settings::class, 'enqueue_assets'         ] );
 
 		// --- Stage 3 — Container Meta Box ---
-		// add_action( 'add_meta_boxes', [ HCQB_Metabox_Container::class, 'register' ] );
-		// add_action( 'save_post',      [ HCQB_Metabox_Container::class, 'save'     ] );
-		// add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class, 'enqueue_for_container' ] );
+		add_action( 'add_meta_boxes',        [ HCQB_Metabox_Container::class, 'register'              ] );
+		add_action( 'save_post',             [ HCQB_Metabox_Container::class, 'save'                  ] );
+		add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,      'enqueue_for_container' ] );
 
 		// --- Stage 4 — Config Admin Screen ---
 		// add_action( 'add_meta_boxes',        [ HCQB_Metabox_Config::class, 'register'         ] );

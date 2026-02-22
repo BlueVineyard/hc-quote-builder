@@ -83,6 +83,8 @@
 
 /* =============================================================================
    Meta box tabs  (container and config edit screens — JS-switched)
+   Uses off-screen positioning instead of display:none so that TinyMCE editors
+   inside inactive panels can initialise correctly on page load.
    ============================================================================= */
 
 .hcqb-metabox-tabs {
@@ -115,12 +117,24 @@
 	font-weight: 600;
 }
 
+/* Inactive panels are moved off-screen so TinyMCE editors inside them can
+   still initialise — display:none would prevent that. */
 .hcqb-metabox-panel {
-	display: none;
+	position: absolute;
+	left: -99999px;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect( 1px, 1px, 1px, 1px );
 }
 
 .hcqb-metabox-panel--active {
-	display: block;
+	position: static;
+	left: auto;
+	width: auto;
+	height: auto;
+	overflow: visible;
+	clip: auto;
 }
 
 /* =============================================================================
@@ -312,6 +326,155 @@
 	padding-bottom: 6px;
 	border-bottom: 1px solid var(--hcqb-border);
 	color: var(--hcqb-text);
+}
+
+/* =============================================================================
+   Meta table spacing
+   ============================================================================= */
+
+.hcqb-meta-table th {
+	padding-left: 0;
+	width: 180px;
+}
+
+/* =============================================================================
+   Product Images gallery  (Stage 3)
+   ============================================================================= */
+
+.hcqb-gallery {
+	margin-bottom: 12px;
+}
+
+.hcqb-gallery__list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 10px;
+	min-height: 20px;
+}
+
+.hcqb-gallery__item {
+	position: relative;
+	width: 90px;
+	height: 90px;
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	overflow: hidden;
+	cursor: grab;
+	flex-shrink: 0;
+}
+
+.hcqb-gallery__item:active {
+	cursor: grabbing;
+}
+
+.hcqb-gallery__item img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.hcqb-gallery__remove {
+	position: absolute;
+	top: 3px;
+	right: 3px;
+	width: 20px;
+	height: 20px;
+	background: rgba( 179, 45, 46, 0.88 );
+	color: #fff;
+	border: none;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.hcqb-gallery__item:hover .hcqb-gallery__remove {
+	opacity: 1;
+}
+
+.hcqb-gallery__item--dragging {
+	opacity: 0.4;
+	outline: 2px dashed var(--hcqb-brand);
+	outline-offset: -2px;
+}
+
+/* =============================================================================
+   Icon picker  (Stage 3 — features repeater)
+   ============================================================================= */
+
+.hcqb-icon-picker {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.hcqb-icon-preview {
+	width: 36px;
+	height: 36px;
+	object-fit: cover;
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	background: var(--hcqb-bg);
+	flex-shrink: 0;
+	display: block;
+}
+
+.hcqb-icon-preview--empty {
+	display: inline-block;
+	width: 36px;
+	height: 36px;
+	border: 1px dashed var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	background: var(--hcqb-bg);
+	flex-shrink: 0;
+}
+
+/* =============================================================================
+   File picker  (Stage 3 — plan document)
+   ============================================================================= */
+
+.hcqb-file-picker {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.hcqb-file-name {
+	font-size: 13px;
+	color: var(--hcqb-muted);
+	font-style: italic;
+}
+
+.hcqb-remove-file {
+	color: var(--hcqb-danger) !important;
+	border-color: var(--hcqb-danger) !important;
+}
+
+.hcqb-remove-file:hover,
+.hcqb-remove-file:focus {
+	background: var(--hcqb-danger) !important;
+	color: #fff !important;
+}
+
+/* =============================================================================
+   Extras repeater unit label  (Stage 3 — lease extras)
+   ============================================================================= */
+
+.hcqb-extras-unit {
+	font-size: 13px;
+	color: var(--hcqb-muted);
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 /* =============================================================================
