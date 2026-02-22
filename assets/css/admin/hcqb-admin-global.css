@@ -1,0 +1,323 @@
+/**
+ * hcqb-admin-global.css
+ *
+ * Shared admin styles loaded on all HCQB admin screens:
+ *   - Plugin settings page (Stage 2)
+ *   - hc-containers meta box (Stage 3)
+ *   - hc-quote-configs edit screen (Stage 4)
+ *   - Submissions list + detail view (Stage 10)
+ *
+ * Covers: tab navigation, tab panels, repeater rows, drag-and-drop states,
+ *         toggle switches, status key badge, and utility classes.
+ */
+
+/* =============================================================================
+   Custom properties
+   ============================================================================= */
+
+:root {
+	--hcqb-brand:      #2271b1;
+	--hcqb-brand-dark: #135e96;
+	--hcqb-border:     #c3c4c7;
+	--hcqb-bg:         #f6f7f7;
+	--hcqb-bg-white:   #ffffff;
+	--hcqb-text:       #1d2327;
+	--hcqb-muted:      #646970;
+	--hcqb-danger:     #b32d2e;
+	--hcqb-radius:     4px;
+}
+
+/* =============================================================================
+   Settings page wrapper
+   ============================================================================= */
+
+.hcqb-settings-wrap h1 {
+	margin-bottom: 12px;
+}
+
+/* =============================================================================
+   Tab navigation  (settings page — URL-param tabs)
+   ============================================================================= */
+
+.hcqb-tabs {
+	display: flex;
+	border-bottom: 1px solid var(--hcqb-border);
+	margin-bottom: 24px;
+}
+
+.hcqb-tab {
+	display: inline-block;
+	padding: 8px 16px;
+	text-decoration: none;
+	color: var(--hcqb-text);
+	border: 1px solid transparent;
+	border-bottom: none;
+	border-radius: var(--hcqb-radius) var(--hcqb-radius) 0 0;
+	margin-bottom: -1px;
+	font-size: 14px;
+	background: transparent;
+	transition: background 0.15s, color 0.15s;
+}
+
+.hcqb-tab:hover {
+	background: var(--hcqb-bg);
+	color: var(--hcqb-brand);
+}
+
+.hcqb-tab--active {
+	background: var(--hcqb-bg-white);
+	border-color: var(--hcqb-border);
+	color: var(--hcqb-text);
+	font-weight: 600;
+}
+
+/* Tab panels — only the active panel is displayed */
+
+.hcqb-tab-panel {
+	display: none;
+}
+
+.hcqb-tab-panel--active {
+	display: block;
+}
+
+/* =============================================================================
+   Meta box tabs  (container and config edit screens — JS-switched)
+   ============================================================================= */
+
+.hcqb-metabox-tabs {
+	display: flex;
+	gap: 4px;
+	border-bottom: 1px solid var(--hcqb-border);
+	margin-bottom: 16px;
+}
+
+.hcqb-metabox-tab-btn {
+	background: none;
+	border: 1px solid transparent;
+	border-bottom: none;
+	border-radius: var(--hcqb-radius) var(--hcqb-radius) 0 0;
+	padding: 6px 14px;
+	cursor: pointer;
+	font-size: 13px;
+	color: var(--hcqb-text);
+	margin-bottom: -1px;
+	transition: background 0.15s;
+}
+
+.hcqb-metabox-tab-btn:hover {
+	background: var(--hcqb-bg);
+}
+
+.hcqb-metabox-tab-btn--active {
+	background: var(--hcqb-bg-white);
+	border-color: var(--hcqb-border);
+	font-weight: 600;
+}
+
+.hcqb-metabox-panel {
+	display: none;
+}
+
+.hcqb-metabox-panel--active {
+	display: block;
+}
+
+/* =============================================================================
+   Repeater — shared across all repeater types
+   ============================================================================= */
+
+.hcqb-repeater {
+	margin-bottom: 24px;
+}
+
+.hcqb-repeater__list {
+	margin-bottom: 8px;
+}
+
+.hcqb-repeater__row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	background: var(--hcqb-bg-white);
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	margin-bottom: 4px;
+	transition: background 0.1s, border-color 0.1s;
+}
+
+.hcqb-repeater__row:last-child {
+	margin-bottom: 0;
+}
+
+/* Drag handle */
+
+.hcqb-repeater__handle {
+	cursor: grab;
+	color: var(--hcqb-muted);
+	flex-shrink: 0;
+	font-size: 18px;
+	line-height: 1;
+	padding: 2px 0;
+	user-select: none;
+}
+
+.hcqb-repeater__handle:active {
+	cursor: grabbing;
+}
+
+/* Remove button */
+
+.hcqb-repeater__remove {
+	flex-shrink: 0;
+	color: var(--hcqb-danger) !important;
+	border-color: var(--hcqb-danger) !important;
+}
+
+.hcqb-repeater__remove:hover,
+.hcqb-repeater__remove:focus {
+	background: var(--hcqb-danger) !important;
+	color: #fff !important;
+}
+
+/* Drag-and-drop states */
+
+.hcqb-row--dragging {
+	opacity: 0.45;
+	background: #f0f6fc;
+}
+
+.hcqb-row--over {
+	border-color: var(--hcqb-brand);
+	background: #f0f6fc;
+}
+
+/* =============================================================================
+   Status key display  (Form Options repeater)
+   ============================================================================= */
+
+.hcqb-status-key-display {
+	font-family: monospace;
+	font-size: 12px;
+	color: var(--hcqb-muted);
+	background: var(--hcqb-bg);
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	padding: 3px 7px;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+/* =============================================================================
+   Toggle switch  (used in Stage 3 for "Enable Lease" field)
+   HTML structure:
+     <label class="hcqb-toggle">
+       <input type="checkbox">
+       <span class="hcqb-toggle__track"></span>
+       Label text
+     </label>
+   ============================================================================= */
+
+.hcqb-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	user-select: none;
+}
+
+.hcqb-toggle input[type="checkbox"] {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+	margin: 0;
+}
+
+.hcqb-toggle__track {
+	position: relative;
+	width: 40px;
+	height: 22px;
+	background: #ccc;
+	border-radius: 11px;
+	flex-shrink: 0;
+	transition: background 0.2s;
+}
+
+/* Thumb via pseudo-element */
+.hcqb-toggle__track::after {
+	content: '';
+	position: absolute;
+	left: 3px;
+	top: 3px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+	transition: left 0.2s;
+}
+
+.hcqb-toggle input:checked + .hcqb-toggle__track {
+	background: var(--hcqb-brand);
+}
+
+.hcqb-toggle input:checked + .hcqb-toggle__track::after {
+	left: 21px;
+}
+
+/* =============================================================================
+   Inline notice  (chicken-and-egg API key notice)
+   ============================================================================= */
+
+.hcqb-notice-inline {
+	background: #fff8e5;
+	border-left: 4px solid #f0b849;
+	padding: 8px 12px;
+	margin: 0 0 8px;
+	font-size: 13px;
+	border-radius: 0 var(--hcqb-radius) var(--hcqb-radius) 0;
+}
+
+/* =============================================================================
+   Slug lock label  (used in Stage 4 — config questions/options)
+   ============================================================================= */
+
+.hcqb-slug-locked {
+	font-family: monospace;
+	font-size: 12px;
+	color: var(--hcqb-muted);
+	background: var(--hcqb-bg);
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	padding: 4px 8px;
+	display: inline-block;
+}
+
+.hcqb-slug-lock-note {
+	font-size: 11px;
+	color: var(--hcqb-muted);
+	font-style: italic;
+}
+
+/* =============================================================================
+   Section headings inside meta boxes / panels
+   ============================================================================= */
+
+.hcqb-section-heading {
+	font-size: 14px;
+	font-weight: 600;
+	margin: 20px 0 8px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--hcqb-border);
+	color: var(--hcqb-text);
+}
+
+/* =============================================================================
+   Utility
+   ============================================================================= */
+
+.hcqb-hidden {
+	display: none !important;
+}
