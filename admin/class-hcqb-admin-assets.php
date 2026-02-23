@@ -50,18 +50,50 @@ class HCQB_Admin_Assets {
 	}
 
 	// -------------------------------------------------------------------------
-	// Stage 4 — hc-quote-configs edit screen (activated in Stage 4)
+	// Stage 4 — hc-quote-configs edit screen
 	// -------------------------------------------------------------------------
 
-	// public static function enqueue_for_config( string $hook ): void {
-	// 	if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) return;
-	// 	if ( 'hc-quote-configs' !== get_post_type() ) return;
-	//
-	// 	wp_enqueue_style( 'hcqb-admin-global', ... );
-	// 	wp_enqueue_style( 'hcqb-admin-config', ... );
-	// 	wp_enqueue_script( 'hcqb-admin-repeater', ... );
-	// 	wp_enqueue_script( 'hcqb-admin-config', ... );
-	// }
+	public static function enqueue_for_config( string $hook ): void {
+		if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
+			return;
+		}
+		if ( 'hc-quote-configs' !== get_post_type() ) {
+			return;
+		}
+
+		// wp.media is needed for the image rule image picker.
+		wp_enqueue_media();
+
+		wp_enqueue_style(
+			'hcqb-admin-global',
+			HCQB_PLUGIN_URL . 'assets/css/admin/hcqb-admin-global.css',
+			[],
+			HCQB_VERSION
+		);
+
+		wp_enqueue_style(
+			'hcqb-admin-config',
+			HCQB_PLUGIN_URL . 'assets/css/admin/hcqb-admin-config.css',
+			[ 'hcqb-admin-global' ],
+			HCQB_VERSION
+		);
+
+		wp_enqueue_script(
+			'hcqb-admin-repeater',
+			HCQB_PLUGIN_URL . 'assets/js/admin/hcqb-admin-repeater.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+
+		wp_enqueue_script(
+			'hcqb-admin-config',
+			HCQB_PLUGIN_URL . 'assets/js/admin/hcqb-admin-config.js',
+			[ 'hcqb-admin-repeater' ],
+			HCQB_VERSION,
+			true
+		);
+	}
 
 	// -------------------------------------------------------------------------
 	// Stage 10 — Submissions list + detail view (activated in Stage 10)

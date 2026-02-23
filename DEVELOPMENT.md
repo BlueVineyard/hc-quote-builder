@@ -33,8 +33,8 @@
 | 1 | Plugin Bootstrap + CPT Registration | ✅ Complete |
 | 2 | Plugin Settings Page | ✅ Complete |
 | 3 | hc-containers Admin Meta Box | ✅ Complete |
-| 4 | hc-quote-configs Admin Screen | 🔄 In Progress |
-| 5 | Product Page Template | 🔲 Not Started |
+| 4 | hc-quote-configs Admin Screen | ✅ Complete |
+| 5 | Product Page Template | ✅ Complete |
 | 6 | Product Grid + Lease Grid Shortcodes | 🔲 Not Started |
 | 7 | Quote Builder — Frame 1 | 🔲 Not Started |
 | 8 | Frame 2 Contact Form + Google APIs | 🔲 Not Started |

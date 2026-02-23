@@ -9,6 +9,7 @@
  *   hcqb_get_setting()                   — Retrieve a value from hcqb_settings
  *   hcqb_generate_slug()                 — Convert a string to an internal slug
  *   hcqb_format_price()                  — Format a float as a display price string
+ *   hcqb_render_stars()                  — Render 5-star rating HTML
  *   hcqb_get_active_config_for_product() — Fetch the active quote config for a product
  */
 
@@ -79,6 +80,43 @@ function hcqb_generate_slug( string $string ): string {
  */
 function hcqb_format_price( float $price ): string {
 	return '$' . number_format( $price, 2 );
+}
+
+// -------------------------------------------------------------------------
+// Star rating
+// -------------------------------------------------------------------------
+
+/**
+ * Render an accessible 5-star rating as a string of HTML spans.
+ *
+ * Each <span> carries a BEM modifier class:
+ *   .hcqb-star--full  — whole star   (rating ≥ i)
+ *   .hcqb-star--half  — half star    (rating ≥ i − 0.5)
+ *   .hcqb-star--empty — empty star
+ *
+ * The CSS uses colour to distinguish the states; aria-hidden keeps the
+ * decorative stars out of the accessibility tree (the parent element
+ * should carry the label, e.g. aria-label="4.5 out of 5 stars").
+ *
+ * @param float $rating  A value from 0.0 to 5.0, supports 0.5 steps.
+ * @return string  HTML string — safe to echo directly.
+ */
+function hcqb_render_stars( float $rating ): string {
+	$rating = max( 0.0, min( 5.0, $rating ) );
+	$html   = '';
+
+	for ( $i = 1; $i <= 5; $i++ ) {
+		if ( $rating >= $i ) {
+			$modifier = 'full';
+		} elseif ( $rating >= $i - 0.5 ) {
+			$modifier = 'half';
+		} else {
+			$modifier = 'empty';
+		}
+		$html .= '<span class="hcqb-star hcqb-star--' . $modifier . '" aria-hidden="true">★</span>';
+	}
+
+	return $html;
 }
 
 // -------------------------------------------------------------------------

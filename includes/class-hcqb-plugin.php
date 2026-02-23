@@ -44,11 +44,11 @@ class HCQB_Plugin {
 		if ( is_admin() ) {
 			require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-admin-assets.php';
 			require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-container.php';
-			// require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-config.php';
+			require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-config.php';
 		}
 
-		// Stage 6–7 — Shortcodes
-		// require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-shortcodes.php';
+		// Stage 5.1 / 7 — Shortcodes (field shortcodes + quote builder)
+		require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-shortcodes.php';
 
 		// Stage 9 — Submission + Email
 		// require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-ajax.php';
@@ -78,21 +78,33 @@ class HCQB_Plugin {
 		add_action( 'admin_enqueue_scripts', [ HCQB_Settings::class, 'enqueue_assets'         ] );
 
 		// --- Stage 3 — Container Meta Box ---
-		add_action( 'add_meta_boxes',        [ HCQB_Metabox_Container::class, 'register'              ] );
-		add_action( 'save_post',             [ HCQB_Metabox_Container::class, 'save'                  ] );
-		add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,      'enqueue_for_container' ] );
-
 		// --- Stage 4 — Config Admin Screen ---
-		// add_action( 'add_meta_boxes',        [ HCQB_Metabox_Config::class, 'register'         ] );
-		// add_action( 'save_post',             [ HCQB_Metabox_Config::class, 'save'              ] );
-		// add_action( 'admin_action_hcqb_duplicate_config', [ HCQB_Metabox_Config::class, 'duplicate' ] );
-		// add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,   'enqueue_for_config' ] );
+		// Admin classes are only loaded in admin context (is_admin()); REST API
+		// requests from the block editor are NOT admin context, so all hooks that
+		// reference these classes must also be guarded here to prevent fatal errors
+		// when save_post fires during a REST API save.
+		if ( is_admin() ) {
+			add_action( 'add_meta_boxes',        [ HCQB_Metabox_Container::class, 'register'              ] );
+			add_action( 'save_post',             [ HCQB_Metabox_Container::class, 'save'                  ] );
+			add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,      'enqueue_for_container' ] );
+
+			add_action( 'add_meta_boxes',        [ HCQB_Metabox_Config::class, 'register'          ] );
+			add_action( 'save_post',             [ HCQB_Metabox_Config::class, 'save'               ] );
+			add_action( 'admin_action_hcqb_duplicate_config', [ HCQB_Metabox_Config::class, 'duplicate' ] );
+			add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,   'enqueue_for_config' ] );
+			add_filter( 'post_row_actions',      [ HCQB_Metabox_Config::class, 'post_row_actions'  ], 10, 2 );
+		}
 
 		// --- Stage 5 — Product Page Template ---
-		// add_filter( 'template_include', [ $this, 'override_container_template' ] );
+		add_filter( 'template_include',   [ $this, 'override_container_template' ] );
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_product_page_assets' ] );
 
-		// --- Stage 6 — Shortcodes ---
-		// add_action( 'init', [ HCQB_Shortcodes::class, 'register' ], 20 );
+		// --- Stage 5.1 / 6 — Shortcodes + Grid CSS ---
+		add_action( 'init',               [ HCQB_Shortcodes::class, 'register' ], 20 );
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_grid_assets' ] );
+
+		// --- Stage 7 — Quote Builder Frame 1 ---
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_quote_builder_assets' ] );
 
 		// --- Stage 8 — Admin Assets (settings screen) ---
 		// add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class, 'enqueue_for_settings' ] );
@@ -112,13 +124,117 @@ class HCQB_Plugin {
 	}
 
 	// -------------------------------------------------------------------------
-	// Template override (uncommented in Stage 5)
+	// Stage 6 — Grid shortcode CSS
+	// Enqueued only on pages that contain either grid shortcode.
 	// -------------------------------------------------------------------------
 
-	// public function override_container_template( string $template ): string {
-	// 	if ( is_singular( 'hc-containers' ) ) {
-	// 		return HCQB_PLUGIN_DIR . 'templates/single-hc-containers.php';
-	// 	}
-	// 	return $template;
-	// }
+	public function enqueue_grid_assets(): void {
+		global $post;
+		if ( ! $post instanceof WP_Post ) {
+			return;
+		}
+		if (
+			! has_shortcode( $post->post_content, 'hc_product_grid' ) &&
+			! has_shortcode( $post->post_content, 'hc_lease_grid' )
+		) {
+			return;
+		}
+		wp_enqueue_style(
+			'hcqb-grids',
+			HCQB_PLUGIN_URL . 'assets/css/frontend/hcqb-grids.css',
+			[],
+			HCQB_VERSION
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Stage 7 — Quote Builder assets
+	// Enqueued only on pages that contain the [hc_quote_builder] shortcode.
+	// Scripts loaded in footer; HCQBConfig inline script is output in the
+	// page body (shortcode), which executes before footer scripts.
+	// -------------------------------------------------------------------------
+
+	public function enqueue_quote_builder_assets(): void {
+		global $post;
+		if ( ! $post instanceof WP_Post ) {
+			return;
+		}
+
+		// Primary: match the page explicitly configured in plugin settings.
+		// Fallback: scan post content for the shortcode tag.
+		$page_id          = (int) hcqb_get_setting( 'quote_builder_page_id' );
+		$on_builder_page  = ( $page_id && is_page( $page_id ) )
+			|| has_shortcode( $post->post_content, 'hc_quote_builder' );
+
+		if ( ! $on_builder_page ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'hcqb-quote-builder',
+			HCQB_PLUGIN_URL . 'assets/css/frontend/hcqb-quote-builder.css',
+			[],
+			HCQB_VERSION
+		);
+
+		// Sub-modules registered first so quote-builder.js can declare them as deps.
+		wp_enqueue_script(
+			'hcqb-pricing',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-pricing.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+		wp_enqueue_script(
+			'hcqb-image-switcher',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-image-switcher.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+		wp_enqueue_script(
+			'hcqb-conditionals',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-conditionals.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+		wp_enqueue_script(
+			'hcqb-feature-pills',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-feature-pills.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+		wp_enqueue_script(
+			'hcqb-quote-builder',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-quote-builder.js',
+			[ 'hcqb-pricing', 'hcqb-image-switcher', 'hcqb-conditionals', 'hcqb-feature-pills' ],
+			HCQB_VERSION,
+			true
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Stage 5 — Product page template + CSS
+	// -------------------------------------------------------------------------
+
+	public function override_container_template( string $template ): string {
+		if ( is_singular( 'hc-containers' ) ) {
+			return HCQB_PLUGIN_DIR . 'templates/single-hc-containers.php';
+		}
+		return $template;
+	}
+
+	public function enqueue_product_page_assets(): void {
+		if ( ! is_singular( 'hc-containers' ) ) {
+			return;
+		}
+		wp_enqueue_style(
+			'hcqb-product-page',
+			HCQB_PLUGIN_URL . 'assets/css/frontend/hcqb-product-page.css',
+			[],
+			HCQB_VERSION
+		);
+	}
 }

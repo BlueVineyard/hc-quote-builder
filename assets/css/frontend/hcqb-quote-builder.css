@@ -1,0 +1,538 @@
+/**
+ * hcqb-quote-builder.css
+ *
+ * Styles for the [hc_quote_builder] shortcode — Frame 1 (Stage 7).
+ * Loaded only on pages that contain the shortcode.
+ *
+ * Layout (mobile-first):
+ *   Default (mobile) : single column, preview below questions
+ *   ≥ 900px          : two-column side-by-side (questions | preview)
+ *
+ * Structure:
+ *   .hcqb-builder-error       — Error states (no product, not found, inactive)
+ *   .hcqb-quote-builder       — Root wrapper
+ *     .hcqb-builder-layout    — Two-column grid container
+ *       .hcqb-builder-questions
+ *         .hcqb-product-selector
+ *         .hcqb-questions-list
+ *           .hcqb-question
+ *             .hcqb-question__header
+ *             .hcqb-question__options
+ *               .hcqb-radio-option / .hcqb-checkbox-option / .hcqb-dropdown
+ *       .hcqb-builder-preview
+ *         .hcqb-preview-image-wrap
+ *           .hcqb-preview-view-toggle
+ *           .hcqb-preview-image
+ *         .hcqb-feature-pills
+ *         .hcqb-preview-price
+ *         .hcqb-preview-actions
+ */
+
+/* =============================================================================
+   Custom properties
+   ============================================================================= */
+
+.hcqb-quote-builder,
+.hcqb-builder-error {
+	--hcqb-qb-accent:       #2271b1;
+	--hcqb-qb-accent-dark:  #135e96;
+	--hcqb-qb-text:         #1d2327;
+	--hcqb-qb-muted:        #646970;
+	--hcqb-qb-border:       #dcdcdc;
+	--hcqb-qb-bg:           #ffffff;
+	--hcqb-qb-bg-alt:       #f6f7f7;
+	--hcqb-qb-radius:       8px;
+	--hcqb-qb-shadow:       0 1px 4px rgba( 0, 0, 0, 0.08 );
+	--hcqb-qb-pill-active:  #e8f0fb;
+}
+
+/* =============================================================================
+   Error card
+   ============================================================================= */
+
+.hcqb-builder-error {
+	max-width: 560px;
+	margin: 40px auto;
+	padding: 36px 32px;
+	background: var( --hcqb-qb-bg );
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius );
+	box-shadow: var( --hcqb-qb-shadow );
+	text-align: center;
+}
+
+.hcqb-builder-error__heading {
+	font-size: 22px;
+	font-weight: 700;
+	color: var( --hcqb-qb-text );
+	margin: 0 0 12px;
+}
+
+.hcqb-builder-error__message {
+	font-size: 15px;
+	color: var( --hcqb-qb-muted );
+	margin: 0 0 24px;
+}
+
+/* =============================================================================
+   Root + layout
+   ============================================================================= */
+
+.hcqb-quote-builder {
+	margin: 0 0 48px;
+}
+
+.hcqb-builder-layout {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 32px;
+	align-items: start;
+}
+
+@media ( min-width: 900px ) {
+	.hcqb-builder-layout {
+		grid-template-columns: 1fr 360px;
+	}
+}
+
+/* =============================================================================
+   Questions panel
+   ============================================================================= */
+
+.hcqb-builder-questions {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+/* =============================================================================
+   Product selector
+   ============================================================================= */
+
+.hcqb-product-selector {
+	padding: 16px 20px;
+	background: var( --hcqb-qb-bg-alt );
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius ) var( --hcqb-qb-radius ) 0 0;
+	border-bottom: none;
+}
+
+.hcqb-product-selector__current {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.hcqb-product-selector__info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.hcqb-product-selector__label {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var( --hcqb-qb-muted );
+}
+
+.hcqb-product-selector__name {
+	font-size: 16px;
+	font-weight: 700;
+	color: var( --hcqb-qb-text );
+}
+
+.hcqb-product-selector__dropdown {
+	margin-top: 12px;
+}
+
+.hcqb-product-select {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 4px;
+	font-size: 14px;
+	color: var( --hcqb-qb-text );
+	background: var( --hcqb-qb-bg );
+}
+
+/* =============================================================================
+   Questions list
+   ============================================================================= */
+
+.hcqb-questions-list {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 0 0 var( --hcqb-qb-radius ) var( --hcqb-qb-radius );
+	overflow: hidden;
+}
+
+/* =============================================================================
+   Individual question card
+   ============================================================================= */
+
+.hcqb-question {
+	padding: 20px 20px 22px;
+	border-bottom: 1px solid var( --hcqb-qb-border );
+	background: var( --hcqb-qb-bg );
+}
+
+.hcqb-question:last-child {
+	border-bottom: none;
+}
+
+.hcqb-question--conditional {
+	border-left: 3px solid var( --hcqb-qb-accent );
+}
+
+/* Conditional reveal animation */
+.hcqb-question--conditional:not( [aria-hidden="true"] ) {
+	animation: hcqb-reveal 0.2s ease;
+}
+
+@keyframes hcqb-reveal {
+	from { opacity: 0; transform: translateY( -6px ); }
+	to   { opacity: 1; transform: translateY(    0  ); }
+}
+
+/* =============================================================================
+   Question header
+   ============================================================================= */
+
+.hcqb-question__header {
+	margin-bottom: 12px;
+}
+
+.hcqb-question__label {
+	font-size: 15px;
+	font-weight: 600;
+	color: var( --hcqb-qb-text );
+	margin: 0 0 2px;
+}
+
+.hcqb-required {
+	color: #d63638;
+}
+
+.hcqb-question__helper {
+	font-size: 13px;
+	color: var( --hcqb-qb-muted );
+	margin: 0;
+}
+
+/* =============================================================================
+   Question options — radio + checkbox
+   ============================================================================= */
+
+.hcqb-question__options {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.hcqb-radio-option,
+.hcqb-checkbox-option {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 6px;
+	cursor: pointer;
+	transition: border-color 0.15s, background 0.15s;
+	font-size: 14px;
+	color: var( --hcqb-qb-text );
+}
+
+.hcqb-radio-option:hover,
+.hcqb-checkbox-option:hover {
+	border-color: var( --hcqb-qb-accent );
+	background: var( --hcqb-qb-pill-active );
+}
+
+.hcqb-radio-option input,
+.hcqb-checkbox-option input {
+	flex-shrink: 0;
+	accent-color: var( --hcqb-qb-accent );
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+}
+
+.hcqb-radio-option__label,
+.hcqb-checkbox-option__label {
+	flex: 1;
+}
+
+.hcqb-option-price {
+	font-size: 12px;
+	color: var( --hcqb-qb-muted );
+	white-space: nowrap;
+	margin-left: auto;
+}
+
+/* Highlight selected radio / checkbox option */
+.hcqb-radio-option:has( input:checked ),
+.hcqb-checkbox-option:has( input:checked ) {
+	border-color: var( --hcqb-qb-accent );
+	background: var( --hcqb-qb-pill-active );
+}
+
+/* =============================================================================
+   Question options — dropdown / select
+   ============================================================================= */
+
+.hcqb-dropdown {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 6px;
+	font-size: 14px;
+	color: var( --hcqb-qb-text );
+	background: var( --hcqb-qb-bg );
+	cursor: pointer;
+	transition: border-color 0.15s;
+}
+
+.hcqb-dropdown:focus {
+	border-color: var( --hcqb-qb-accent );
+	outline: none;
+	box-shadow: 0 0 0 2px rgba( 34, 113, 177, 0.2 );
+}
+
+/* =============================================================================
+   Preview panel
+   ============================================================================= */
+
+.hcqb-builder-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	position: sticky;
+	top: 24px; /* Sticks when scrolling on desktop */
+}
+
+/* =============================================================================
+   Preview image + view toggle
+   ============================================================================= */
+
+.hcqb-preview-image-wrap {
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius );
+	overflow: hidden;
+	background: var( --hcqb-qb-bg );
+}
+
+.hcqb-preview-view-toggle {
+	display: flex;
+	border-bottom: 1px solid var( --hcqb-qb-border );
+}
+
+.hcqb-view-btn {
+	flex: 1;
+	padding: 8px 4px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var( --hcqb-qb-muted );
+	background: none;
+	border: none;
+	border-right: 1px solid var( --hcqb-qb-border );
+	cursor: pointer;
+	transition: color 0.15s, background 0.15s;
+}
+
+.hcqb-view-btn:last-child {
+	border-right: none;
+}
+
+.hcqb-view-btn:hover {
+	color: var( --hcqb-qb-accent );
+	background: var( --hcqb-qb-bg-alt );
+}
+
+.hcqb-view-btn--active {
+	color: var( --hcqb-qb-accent );
+	background: var( --hcqb-qb-bg-alt );
+	box-shadow: inset 0 -2px 0 var( --hcqb-qb-accent );
+}
+
+.hcqb-preview-image {
+	aspect-ratio: 4 / 3;
+	overflow: hidden;
+	background: #f0f0f0;
+}
+
+.hcqb-preview-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+	transition: opacity 0.2s;
+}
+
+.hcqb-preview-img-placeholder {
+	width: 100%;
+	height: 100%;
+	background: #e8e8e8;
+}
+
+/* =============================================================================
+   Feature pills
+   ============================================================================= */
+
+.hcqb-feature-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.hcqb-pill {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 12px;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 20px;
+	font-size: 12px;
+	background: var( --hcqb-qb-bg );
+	transition: border-color 0.15s, background 0.15s;
+	min-width: 80px;
+}
+
+.hcqb-pill--active {
+	border-color: var( --hcqb-qb-accent );
+	background: var( --hcqb-qb-pill-active );
+}
+
+.hcqb-pill__label {
+	font-weight: 600;
+	color: var( --hcqb-qb-muted );
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.hcqb-pill__value {
+	color: var( --hcqb-qb-text );
+	font-weight: 500;
+}
+
+/* =============================================================================
+   Live price
+   ============================================================================= */
+
+.hcqb-preview-price {
+	padding: 16px 20px;
+	background: var( --hcqb-qb-bg );
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius );
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.hcqb-preview-price__label {
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var( --hcqb-qb-muted );
+}
+
+.hcqb-live-price {
+	font-size: 28px;
+	font-weight: 700;
+	color: var( --hcqb-qb-text );
+	line-height: 1.1;
+}
+
+.hcqb-preview-price__note {
+	font-size: 12px;
+	color: var( --hcqb-qb-muted );
+	margin: 0;
+}
+
+/* =============================================================================
+   Preview actions
+   ============================================================================= */
+
+.hcqb-preview-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.hcqb-preview-step {
+	font-size: 13px;
+	color: var( --hcqb-qb-muted );
+	margin: 0;
+	text-align: center;
+}
+
+/* =============================================================================
+   Buttons — shared + variants used by the builder
+   ============================================================================= */
+
+.hcqb-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 20px;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+	border: none;
+	transition: background 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.hcqb-btn--primary {
+	background: var( --hcqb-qb-accent );
+	color: #fff;
+}
+
+.hcqb-btn--primary:hover:not( :disabled ) {
+	background: var( --hcqb-qb-accent-dark );
+	color: #fff;
+}
+
+.hcqb-btn--primary:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.hcqb-btn--secondary {
+	background: var( --hcqb-qb-bg-alt );
+	color: var( --hcqb-qb-text );
+	border: 1px solid var( --hcqb-qb-border );
+}
+
+.hcqb-btn--secondary:hover {
+	background: #ebebeb;
+	color: var( --hcqb-qb-text );
+}
+
+.hcqb-btn--ghost {
+	background: transparent;
+	color: var( --hcqb-qb-accent );
+	border: 1px solid var( --hcqb-qb-accent );
+	padding: 6px 14px;
+	font-size: 13px;
+}
+
+.hcqb-btn--ghost:hover {
+	background: var( --hcqb-qb-pill-active );
+}
+
+.hcqb-btn--full {
+	width: 100%;
+	display: flex;
+}
+
+.hcqb-btn--hidden {
+	display: none !important;
+}

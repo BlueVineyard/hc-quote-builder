@@ -1,7 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(rsync:*)"
+      "Bash(rsync:*)",
+      "Read(//d/Dev Resources/Dev Enviroment/Local SItes/hc-quote-builder/app/public/wp-content/plugins/hc-quote-builder/admin/**)",
+      "Bash(SRC=\"D:/Blue Vineyard/Github - BV/hc-quote-builder\")",
+      "Bash(DST=\"D:/Dev Resources/Dev Enviroment/Local SItes/hc-quote-builder/app/public/wp-content/plugins/hc-quote-builder\")",
+      "Bash(__NEW_LINE_350db7d70c5b8fa7__ cp \"$SRC/admin/class-hcqb-metabox-config.php\" \"$DST/admin/class-hcqb-metabox-config.php\")",
+      "Bash(__NEW_LINE_350db7d70c5b8fa7__ cp \"$SRC/admin/class-hcqb-admin-assets.php\" \"$DST/admin/class-hcqb-admin-assets.php\")",
+      "Bash(__NEW_LINE_350db7d70c5b8fa7__ cp \"$SRC/assets/js/admin/hcqb-admin-repeater.js\" \"$DST/assets/js/admin/hcqb-admin-repeater.js\")",
+      "Bash(__NEW_LINE_350db7d70c5b8fa7__ cp \"$SRC/assets/js/admin/hcqb-admin-config.js\" \"$DST/assets/js/admin/hcqb-admin-config.js\")",
+      "Bash(__NEW_LINE_350db7d70c5b8fa7__ cp \"$SRC/assets/css/admin/hcqb-admin-config.css\" \"$DST/assets/css/admin/hcqb-admin-config.css\")",
+      "Bash(__NEW_LINE_350db7d70c5b8fa7__ echo \"All Stage 4 files copied.\")",
+      "Bash(python3:*)"
     ]
   }
 }

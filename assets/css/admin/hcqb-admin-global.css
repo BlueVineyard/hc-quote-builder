@@ -478,6 +478,144 @@
 }
 
 /* =============================================================================
+   Instructions tab — accordion (details/summary)
+   ============================================================================= */
+
+.hcqb-instructions-panel {
+	max-width: 900px;
+}
+
+.hcqb-accordion {
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	margin-bottom: 12px;
+	background: var(--hcqb-bg-white);
+}
+
+.hcqb-accordion__trigger {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 16px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	list-style: none;
+	user-select: none;
+	color: var(--hcqb-text);
+	background: var(--hcqb-bg);
+	border-radius: var(--hcqb-radius);
+	transition: background 0.15s;
+}
+
+.hcqb-accordion__trigger::-webkit-details-marker {
+	display: none;
+}
+
+.hcqb-accordion__trigger::before {
+	content: '▶';
+	font-size: 10px;
+	color: var(--hcqb-muted);
+	flex-shrink: 0;
+	transition: transform 0.2s;
+}
+
+.hcqb-accordion[open] > .hcqb-accordion__trigger {
+	border-radius: var(--hcqb-radius) var(--hcqb-radius) 0 0;
+	border-bottom: 1px solid var(--hcqb-border);
+}
+
+.hcqb-accordion[open] > .hcqb-accordion__trigger::before {
+	transform: rotate( 90deg );
+}
+
+.hcqb-accordion__trigger:hover {
+	background: #edf0f3;
+}
+
+.hcqb-accordion__body {
+	padding: 16px 20px 20px;
+}
+
+.hcqb-accordion__body h3 {
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--hcqb-muted);
+	margin: 20px 0 8px;
+}
+
+.hcqb-accordion__body h3:first-child {
+	margin-top: 8px;
+}
+
+/* =============================================================================
+   Instructions tab — reference table
+   ============================================================================= */
+
+.hcqb-instructions-table {
+	margin-bottom: 16px !important;
+	border-radius: var(--hcqb-radius);
+	overflow: hidden;
+}
+
+.hcqb-instructions-table th {
+	background: var(--hcqb-bg);
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--hcqb-muted);
+	padding: 8px 12px;
+}
+
+.hcqb-instructions-table td {
+	padding: 7px 12px;
+	font-size: 13px;
+	vertical-align: middle;
+}
+
+.hcqb-instructions-table code {
+	font-size: 12px;
+	background: var(--hcqb-bg);
+	padding: 2px 5px;
+	border-radius: 3px;
+	white-space: nowrap;
+}
+
+.hcqb-instructions-divider td {
+	background: var(--hcqb-bg) !important;
+	font-size: 12px;
+	padding: 6px 12px;
+	color: var(--hcqb-muted);
+	border-top: 1px solid var(--hcqb-border);
+}
+
+/* =============================================================================
+   Instructions tab — code blocks
+   ============================================================================= */
+
+.hcqb-code-block {
+	background: #1e1e2e;
+	color: #cdd6f4;
+	border-radius: var(--hcqb-radius);
+	padding: 14px 16px;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	overflow-x: auto;
+	margin: 0 0 16px;
+	white-space: pre;
+}
+
+.hcqb-code-block code {
+	background: none;
+	padding: 0;
+	font-size: inherit;
+	color: inherit;
+}
+
+/* =============================================================================
    Utility
    ============================================================================= */
 

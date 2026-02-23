@@ -1,0 +1,236 @@
+/**
+ * hcqb-admin-config.css
+ *
+ * Styles for the hc-quote-configs edit screen (Stage 4).
+ * Loaded alongside hcqb-admin-global.css — relies on its custom properties.
+ *
+ * Covers:
+ *   - Questions list and question rows (card layout with collapsible body)
+ *   - Nested options repeater within each question
+ *   - Conditional fields section
+ *   - Image rules list and rule rows
+ */
+
+/* =============================================================================
+   Questions list
+   ============================================================================= */
+
+.hcqb-questions-wrap {
+	margin-bottom: 16px;
+}
+
+.hcqb-questions-list {
+	margin-bottom: 12px;
+}
+
+/* Each question is a card: header always visible, body collapsible. */
+.hcqb-question-row {
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	margin-bottom: 8px;
+	background: var(--hcqb-bg-white);
+	transition: border-color 0.1s;
+}
+
+.hcqb-question-row.hcqb-row--over {
+	border-color: var(--hcqb-brand);
+}
+
+/* =============================================================================
+   Question header
+   ============================================================================= */
+
+.hcqb-question-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	background: var(--hcqb-bg);
+	border-radius: var(--hcqb-radius);
+}
+
+/* When the body is expanded the header bottom corners should be square. */
+.hcqb-question-row:has(.hcqb-question-body:not(.hcqb-hidden)) .hcqb-question-header {
+	border-radius: var(--hcqb-radius) var(--hcqb-radius) 0 0;
+	border-bottom: 1px solid var(--hcqb-border);
+}
+
+.hcqb-question-label-preview {
+	flex: 1;
+	font-weight: 600;
+	font-size: 13px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* =============================================================================
+   Question body
+   ============================================================================= */
+
+.hcqb-question-body {
+	padding: 12px 16px 16px;
+}
+
+/* Tighten the form-table inside question bodies. */
+.hcqb-question-table th {
+	width: 140px;
+	padding-left: 0;
+	padding-top: 8px;
+	vertical-align: top;
+}
+
+.hcqb-question-table td {
+	padding-top: 8px;
+	padding-bottom: 4px;
+}
+
+/* =============================================================================
+   Conditional fields block
+   ============================================================================= */
+
+.hcqb-conditional-fields {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-top: 8px;
+}
+
+.hcqb-conditional-fields select {
+	min-width: 180px;
+}
+
+/* =============================================================================
+   Options repeater (nested within each question)
+   ============================================================================= */
+
+.hcqb-options-wrap {
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid var(--hcqb-border);
+}
+
+.hcqb-options-list {
+	margin-bottom: 8px;
+}
+
+/* Option rows use the global .hcqb-repeater__row but with tighter field sizing. */
+.hcqb-option-row {
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.hcqb-option-row .regular-text {
+	width: 180px;
+	flex-shrink: 1;
+}
+
+.hcqb-option-row .hcqb-option-slug-display {
+	min-width: 80px;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hcqb-option-row .small-text {
+	width: 72px;
+}
+
+.hcqb-option-row .hcqb-price-type {
+	/* Keep the +/- select compact. */
+	width: auto;
+}
+
+.hcqb-option-row .hcqb-option-role {
+	width: auto;
+}
+
+.hcqb-affects-image-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	color: var(--hcqb-muted);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+/* =============================================================================
+   Image rules list
+   ============================================================================= */
+
+.hcqb-image-rules-wrap {
+	margin-bottom: 16px;
+}
+
+.hcqb-image-rules-list {
+	margin-bottom: 12px;
+}
+
+/* Each rule row is a flex container with three labelled sections. */
+.hcqb-image-rule-row {
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 12px;
+	padding: 10px 12px;
+}
+
+/* Small grey label above each section within a rule row. */
+.hcqb-rule-label {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	color: var(--hcqb-muted);
+	margin-bottom: 4px;
+	letter-spacing: 0.04em;
+}
+
+/* Match tags section */
+.hcqb-rule-tags-wrap {
+	flex: 1 1 220px;
+	min-width: 160px;
+}
+
+.hcqb-match-tags-select {
+	width: 100%;
+	min-height: 80px;
+}
+
+/* Image picker section */
+.hcqb-rule-image-wrap {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	align-items: flex-start;
+}
+
+.hcqb-rule-image-preview {
+	display: block;
+	width: 60px;
+	height: 60px;
+	object-fit: cover;
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	background: var(--hcqb-bg);
+}
+
+.hcqb-rule-image-empty {
+	display: block;
+	width: 60px;
+	height: 60px;
+	border: 1px dashed var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	background: var(--hcqb-bg);
+}
+
+/* View dropdown section */
+.hcqb-rule-view-wrap {
+	flex-shrink: 0;
+}
+
+.hcqb-rule-view-wrap select {
+	width: auto;
+}

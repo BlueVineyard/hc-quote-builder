@@ -6,11 +6,12 @@
  * Four tabs: General, Email, Quote Builder, Form Options.
  *
  * Methods:
- *   register_settings_page() — adds submenu page under Settings
- *   register_setting()       — registers hcqb_settings option with sanitisation callback
- *   enqueue_assets()         — loads CSS/JS on the settings screen only
- *   render_settings_page()   — outputs the four-tab form
- *   sanitise()               — full sanitisation for all four tabs
+ *   register_settings_page()   — adds submenu page under Settings
+ *   register_setting()         — registers hcqb_settings option with sanitisation callback
+ *   enqueue_assets()           — loads CSS/JS on the settings screen only
+ *   render_settings_page()     — outputs the five-tab form
+ *   render_tab_instructions()  — read-only reference panel (shortcodes, PHP snippets, general docs)
+ *   sanitise()                 — full sanitisation for all four data tabs
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -108,6 +109,7 @@ class HCQB_Settings {
 			'email'         => 'Email',
 			'quote-builder' => 'Quote Builder',
 			'form-options'  => 'Form Options',
+			'instructions'  => 'Instructions',
 		];
 
 		// Normalise tab to a known value.
@@ -141,8 +143,12 @@ class HCQB_Settings {
 					?>
 				</div>
 
-				<?php submit_button( 'Save Settings' ); ?>
+				<?php if ( 'instructions' !== $active_tab ) : ?>
+					<?php submit_button( 'Save Settings' ); ?>
+				<?php endif; ?>
 			</form>
+
+		<?php self::render_tab_instructions( $active_tab ); ?>
 		</div>
 		<?php
 	}
@@ -463,6 +469,273 @@ class HCQB_Settings {
 					+ Add Status
 				</button>
 			</div>
+
+		</div>
+		<?php
+	}
+
+	// -------------------------------------------------------------------------
+	// Tab 5 — Instructions (read-only reference panel — rendered outside <form>)
+	// -------------------------------------------------------------------------
+
+	private static function render_tab_instructions( string $active_tab ): void {
+		$visible = $active_tab === 'instructions';
+		?>
+		<div class="hcqb-tab-panel hcqb-instructions-panel<?php echo $visible ? ' hcqb-tab-panel--active' : ''; ?>" id="hcqb-tab-instructions">
+
+			<p>Use the shortcodes and PHP snippets below to build custom product templates with your page builder, or to query container data programmatically.</p>
+			<p><strong>All individual shortcodes accept an optional <code>post_id=""</code> attribute.</strong> When placed on an <code>hc-containers</code> singular page, <code>post_id</code> can be omitted — the shortcode reads from the current post automatically. When used elsewhere (e.g. a custom template or page builder widget), pass the product's post ID explicitly.</p>
+
+			<?php /* ----- Panel 1: Shortcodes ----- */ ?>
+			<details class="hcqb-accordion" open>
+				<summary class="hcqb-accordion__trigger">Shortcodes — Individual Field Output</summary>
+				<div class="hcqb-accordion__body">
+					<p class="description">Place these shortcodes anywhere on an <code>hc-containers</code> page, or in any template using a page builder.</p>
+					<table class="widefat striped hcqb-instructions-table">
+						<thead>
+							<tr>
+								<th>Shortcode</th>
+								<th>Output</th>
+								<th>Notes</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code>[hcqb_title]</code></td>
+								<td>Product title</td>
+								<td>Plain text</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_price]</code></td>
+								<td>Base (flat-pack) price</td>
+								<td>Formatted — e.g. <em>$7,500.00</em></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_assembled_price]</code></td>
+								<td>Fully assembled price</td>
+								<td>Base price ± assembly option delta. Falls back to base price if no active config.</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_rating]</code></td>
+								<td>Star rating + review count</td>
+								<td>Styled HTML block. Empty if rating is 0.</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_review_count]</code></td>
+								<td>Review count number</td>
+								<td>Plain number only — e.g. <em>42</em></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_short_desc]</code></td>
+								<td>Short description</td>
+								<td>Plain text</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_description]</code></td>
+								<td>Full product description</td>
+								<td>Rich text / HTML</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_additional_notes]</code></td>
+								<td>Additional notes block</td>
+								<td>Wrapped in <code>.hcqb-additional-notes</code></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_gallery]</code></td>
+								<td>All product images</td>
+								<td>Thumbnail strip. Attr: <code>size=""</code> (default: <em>thumbnail</em>)</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_main_image]</code></td>
+								<td>Primary product image only</td>
+								<td>First gallery image. Attr: <code>size=""</code> (default: <em>large</em>)</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_features]</code></td>
+								<td>Features list</td>
+								<td>Icon + label rows in <code>.hcqb-features-list</code></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_plan_document]</code></td>
+								<td>Floor plan download link</td>
+								<td>Attr: <code>label=""</code> (default: <em>Download Floor Plan</em>)</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_shipping_link]</code></td>
+								<td>Shipping details link</td>
+								<td>Attr: <code>label=""</code> (default: <em>Shipping Details</em>)</td>
+							</tr>
+							<tr class="hcqb-instructions-divider">
+								<td colspan="3"><strong>Lease Fields</strong> — return empty if lease is disabled on the product</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_lease_price]</code></td>
+								<td>Lease price</td>
+								<td>Formatted — e.g. <em>$299.00</em></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_lease_price_label]</code></td>
+								<td>Lease price label</td>
+								<td>Plain text — e.g. <em>per week</em></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_lease_terms]</code></td>
+								<td>Lease terms</td>
+								<td>Rich text / HTML</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_lease_layout_title]</code></td>
+								<td>Standard layout section title</td>
+								<td>Plain text</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_lease_layout_desc]</code></td>
+								<td>Standard layout section description</td>
+								<td>Rich text / HTML</td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_lease_extras]</code></td>
+								<td>Optional extras list</td>
+								<td>Styled list with weekly prices</td>
+							</tr>
+							<tr class="hcqb-instructions-divider">
+								<td colspan="3"><strong>Buttons</strong></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_quote_button]</code></td>
+								<td>Get a Custom Quote button</td>
+								<td>Hidden via CSS if no active config is linked. Attr: <code>label=""</code></td>
+							</tr>
+							<tr>
+								<td><code>[hcqb_enquire_button]</code></td>
+								<td>Enquire Now button (lease)</td>
+								<td>Empty if lease is disabled. Attr: <code>label=""</code></td>
+							</tr>
+						</tbody>
+					</table>
+
+					<h3>Usage example</h3>
+					<pre class="hcqb-code-block"><code>[hcqb_main_image size="full"]
+[hcqb_title]
+[hcqb_price]
+[hcqb_assembled_price]
+[hcqb_rating]
+[hcqb_short_desc]
+[hcqb_features]
+[hcqb_quote_button label="Request a Quote"]</code></pre>
+
+					<p class="description">Using a specific product on any page: <code>[hcqb_title post_id="42"]</code></p>
+				</div>
+			</details>
+
+			<?php /* ----- Panel 2: PHP Snippets ----- */ ?>
+			<details class="hcqb-accordion">
+				<summary class="hcqb-accordion__trigger">PHP Snippets — Direct Meta Access</summary>
+				<div class="hcqb-accordion__body">
+					<p class="description">Use these in theme templates, child theme files, or custom PHP. Replace <code>$post_id</code> with the relevant integer ID (e.g. <code>get_the_ID()</code> inside a loop).</p>
+
+					<h3>Product Info</h3>
+					<pre class="hcqb-code-block"><code><?php echo esc_html(
+						"// Post title\n" .
+						"get_the_title( \$post_id );\n\n" .
+						"// Base (flat-pack) price — stored as float\n" .
+						"\$price = (float) get_post_meta( \$post_id, 'hcqb_product_price', true );\n\n" .
+						"// Star rating — float 0.0–5.0 (supports half-star)\n" .
+						"\$rating = (float) get_post_meta( \$post_id, 'hcqb_star_rating', true );\n\n" .
+						"// Review count — integer\n" .
+						"\$count = absint( get_post_meta( \$post_id, 'hcqb_review_count', true ) );\n\n" .
+						"// Short description — plain text\n" .
+						"\$short = get_post_meta( \$post_id, 'hcqb_short_description', true );\n\n" .
+						"// Full product description — rich text / HTML (pass through wp_kses_post before output)\n" .
+						"\$desc = get_post_meta( \$post_id, 'hcqb_product_description', true );\n\n" .
+						"// Additional notes — plain text\n" .
+						"\$notes = get_post_meta( \$post_id, 'hcqb_additional_notes', true );\n\n" .
+						"// Gallery — ordered array of attachment IDs\n" .
+						"\$ids = (array) ( get_post_meta( \$post_id, 'hcqb_product_images', true ) ?: [] );\n\n" .
+						"// Features — array of [ 'icon_id' => int, 'label' => string ]\n" .
+						"\$features = (array) ( get_post_meta( \$post_id, 'hcqb_features', true ) ?: [] );\n\n" .
+						"// Plan document — attachment ID; use wp_get_attachment_url() for the download link\n" .
+						"\$doc_id  = absint( get_post_meta( \$post_id, 'hcqb_plan_document', true ) );\n" .
+						"\$doc_url = \$doc_id ? wp_get_attachment_url( \$doc_id ) : '';\n\n" .
+						"// Shipping details link — URL string\n" .
+						"\$shipping = get_post_meta( \$post_id, 'hcqb_shipping_details_link', true );"
+					); ?></code></pre>
+
+					<h3>Lease Fields</h3>
+					<pre class="hcqb-code-block"><code><?php echo esc_html(
+						"// Lease enabled — 1 or 0\n" .
+						"\$lease_on = (bool) get_post_meta( \$post_id, 'hcqb_lease_enabled', true );\n\n" .
+						"// Lease price — float\n" .
+						"\$lease_price = (float) get_post_meta( \$post_id, 'hcqb_lease_price', true );\n\n" .
+						"// Lease price label — plain text, e.g. \"per week\"\n" .
+						"\$label = get_post_meta( \$post_id, 'hcqb_lease_price_label', true ) ?: 'per week';\n\n" .
+						"// Lease terms — rich text / HTML\n" .
+						"\$terms = get_post_meta( \$post_id, 'hcqb_lease_terms', true );\n\n" .
+						"// Standard layout title — plain text\n" .
+						"\$layout_title = get_post_meta( \$post_id, 'hcqb_lease_layout_title', true );\n\n" .
+						"// Standard layout description — rich text / HTML\n" .
+						"\$layout_desc  = get_post_meta( \$post_id, 'hcqb_lease_layout_description', true );\n\n" .
+						"// Optional extras — array of [ 'label' => string, 'weekly_price' => float ]\n" .
+						"\$extras = (array) ( get_post_meta( \$post_id, 'hcqb_lease_extras', true ) ?: [] );\n\n" .
+						"// Enquiry button label — plain text\n" .
+						"\$btn = get_post_meta( \$post_id, 'hcqb_enquiry_button_label', true ) ?: 'Enquire Now';"
+					); ?></code></pre>
+
+					<h3>Assembled Price (computed — not stored)</h3>
+					<pre class="hcqb-code-block"><code><?php echo esc_html(
+						"// The assembled price is calculated at runtime from the active config.\n" .
+						"\$base_price = (float) get_post_meta( \$post_id, 'hcqb_product_price', true );\n" .
+						"\$config     = hcqb_get_active_config_for_product( \$post_id );\n\n" .
+						"if ( \$config ) {\n" .
+						"    \$questions = get_post_meta( \$config->ID, 'hcqb_questions', true ) ?: [];\n" .
+						"    foreach ( \$questions as \$q ) {\n" .
+						"        foreach ( \$q['options'] ?? [] as \$opt ) {\n" .
+						"            if ( ( \$opt['option_role'] ?? '' ) === 'assembly' ) {\n" .
+						"                \$delta     = (float) \$opt['price'];\n" .
+						"                \$assembled = ( 'deduction' === ( \$opt['price_type'] ?? '' ) )\n" .
+						"                    ? \$base_price - \$delta\n" .
+						"                    : \$base_price + \$delta;\n" .
+						"                break 2;\n" .
+						"            }\n" .
+						"        }\n" .
+						"    }\n" .
+						"}"
+					); ?></code></pre>
+				</div>
+			</details>
+
+			<?php /* ----- Panel 3: General Shortcodes ----- */ ?>
+			<details class="hcqb-accordion">
+				<summary class="hcqb-accordion__trigger">General Shortcodes — Grids &amp; Quote Builder</summary>
+				<div class="hcqb-accordion__body">
+
+					<h3><code>[hc_product_grid]</code></h3>
+					<p>Displays a responsive grid of published <code>hc-containers</code> products. Full implementation available in Stage 6.</p>
+					<table class="widefat striped hcqb-instructions-table">
+						<thead>
+							<tr><th>Attribute</th><th>Default</th><th>Description</th></tr>
+						</thead>
+						<tbody>
+							<tr><td><code>columns</code></td><td>3</td><td>Number of grid columns.</td></tr>
+							<tr><td><code>limit</code></td><td>12</td><td>Maximum number of products to display.</td></tr>
+							<tr><td><code>category</code></td><td><em>all</em></td><td>Filter by container category slug.</td></tr>
+							<tr><td><code>orderby</code></td><td>date</td><td><code>date</code> | <code>title</code> | <code>price</code></td></tr>
+							<tr><td><code>order</code></td><td>DESC</td><td><code>ASC</code> | <code>DESC</code></td></tr>
+						</tbody>
+					</table>
+					<pre class="hcqb-code-block"><code>[hc_product_grid columns="3" limit="6" orderby="price" order="ASC"]</code></pre>
+
+					<h3><code>[hc_lease_grid]</code></h3>
+					<p>Same as <code>[hc_product_grid]</code> but shows only products with lease enabled. Accepts the same attributes. Full implementation available in Stage 6.</p>
+					<pre class="hcqb-code-block"><code>[hc_lease_grid columns="2" limit="4"]</code></pre>
+
+					<h3><code>[hc_quote_builder]</code></h3>
+					<p>Embeds the two-frame interactive quote builder (product configuration + contact form). Place this shortcode on the page configured in <strong>Settings → HC Quote Builder → Quote Builder → Quote Builder Page</strong>. Available in Stage 7.</p>
+					<pre class="hcqb-code-block"><code>[hc_quote_builder]</code></pre>
+					<p class="description">The quote builder reads the <code>?product=</code> URL parameter to load the correct container configuration. Place this shortcode on exactly one page — use the Quote Builder Page setting to register it.</p>
+
+				</div>
+			</details>
 
 		</div>
 		<?php

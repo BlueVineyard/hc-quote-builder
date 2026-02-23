@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l:*)",
+      "Read(//d/Dev Resources/Dev Enviroment/Local SItes/hc-quote-builder/**)"
+    ],
+    "additionalDirectories": [
+      "d:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$REPO\\includes",
+      "D:\\Dev Resources\\Dev Enviroment\\Local SItes\\hc-quote-builder\\app\\public\\wp-content\\plugins\\hc-quote-builder"
+    ]
+  }
+}

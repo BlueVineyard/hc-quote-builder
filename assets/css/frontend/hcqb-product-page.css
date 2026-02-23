@@ -1,0 +1,465 @@
+/**
+ * hcqb-product-page.css
+ *
+ * Styles for the hc-containers singular product page (Stage 5).
+ * Loaded only on is_singular('hc-containers') via wp_enqueue_scripts.
+ *
+ * The outer page frame (site header, footer, body background) is provided
+ * by the active theme. These styles scope everything inside .hcqb-product-page.
+ *
+ * Layout breakpoints:
+ *   Default (mobile-first) : single column
+ *   ≥ 768px                : two-column (gallery | details)
+ */
+
+/* =============================================================================
+   Custom properties (local to the product page)
+   ============================================================================= */
+
+.hcqb-product-page {
+	--hcqb-pp-max:       1100px;
+	--hcqb-pp-gap:       40px;
+	--hcqb-pp-gallery:   52%;
+	--hcqb-pp-radius:    6px;
+	--hcqb-pp-border:    #dcdcdc;
+	--hcqb-pp-text:      #1d2327;
+	--hcqb-pp-muted:     #646970;
+	--hcqb-pp-accent:    #2271b1;
+	--hcqb-pp-accent-dark: #135e96;
+	--hcqb-pp-price-color: #1d2327;
+	--hcqb-pp-star-full:  #f0a500;
+	--hcqb-pp-star-empty: #dcdcdc;
+}
+
+/* =============================================================================
+   Page wrapper
+   ============================================================================= */
+
+.hcqb-product-page {
+	padding: 32px 16px 64px;
+	color: var(--hcqb-pp-text);
+}
+
+.hcqb-product-container {
+	max-width: var(--hcqb-pp-max);
+	margin: 0 auto;
+}
+
+/* =============================================================================
+   View switcher tabs (Purchase / Lease)
+   ============================================================================= */
+
+.hcqb-view-switcher {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 28px;
+	border-bottom: 2px solid var(--hcqb-pp-border);
+	padding-bottom: 0;
+}
+
+.hcqb-view-tab {
+	display: inline-block;
+	padding: 8px 20px;
+	font-size: 15px;
+	font-weight: 500;
+	text-decoration: none;
+	color: var(--hcqb-pp-muted);
+	border: 1px solid transparent;
+	border-bottom: none;
+	border-radius: 4px 4px 0 0;
+	margin-bottom: -2px;
+	transition: color 0.15s, background 0.15s;
+}
+
+.hcqb-view-tab:hover {
+	color: var(--hcqb-pp-accent);
+}
+
+.hcqb-view-tab--active {
+	color: var(--hcqb-pp-text);
+	font-weight: 600;
+	border-color: var(--hcqb-pp-border);
+	border-bottom-color: #fff;
+	background: #fff;
+}
+
+/* =============================================================================
+   Two-column product layout
+   ============================================================================= */
+
+.hcqb-product-layout {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--hcqb-pp-gap);
+	margin-bottom: 48px;
+}
+
+@media ( min-width: 768px ) {
+	.hcqb-product-layout {
+		grid-template-columns: var(--hcqb-pp-gallery) 1fr;
+		align-items: start;
+	}
+}
+
+/* =============================================================================
+   Product gallery
+   ============================================================================= */
+
+.hcqb-gallery-main {
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	overflow: hidden;
+	border-radius: var(--hcqb-pp-radius);
+	background: #f0f0f0;
+	margin-bottom: 10px;
+}
+
+.hcqb-gallery-main__img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+	transition: opacity 0.15s;
+}
+
+.hcqb-gallery-thumbs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.hcqb-gallery-thumb {
+	width: 72px;
+	height: 72px;
+	padding: 0;
+	border: 2px solid var(--hcqb-pp-border);
+	border-radius: 4px;
+	overflow: hidden;
+	background: none;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: border-color 0.15s;
+}
+
+.hcqb-gallery-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.hcqb-gallery-thumb:hover,
+.hcqb-gallery-thumb--active {
+	border-color: var(--hcqb-pp-accent);
+}
+
+/* =============================================================================
+   Details column — shared
+   ============================================================================= */
+
+.hcqb-product-title {
+	font-size: clamp( 22px, 4vw, 32px );
+	font-weight: 700;
+	line-height: 1.2;
+	margin: 0 0 12px;
+	color: var(--hcqb-pp-text);
+}
+
+.hcqb-title-tag {
+	font-weight: 400;
+	color: var(--hcqb-pp-muted);
+}
+
+/* =============================================================================
+   Star rating
+   ============================================================================= */
+
+.hcqb-rating {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.hcqb-stars {
+	display: inline-flex;
+	gap: 1px;
+}
+
+.hcqb-star {
+	font-size: 18px;
+	line-height: 1;
+}
+
+.hcqb-star--full,
+.hcqb-star--half {
+	color: var(--hcqb-pp-star-full);
+}
+
+.hcqb-star--empty {
+	color: var(--hcqb-pp-star-empty);
+}
+
+.hcqb-review-count {
+	font-size: 13px;
+	color: var(--hcqb-pp-muted);
+}
+
+/* =============================================================================
+   Short description
+   ============================================================================= */
+
+.hcqb-short-desc {
+	font-size: 15px;
+	color: var(--hcqb-pp-muted);
+	margin: 0 0 20px;
+	line-height: 1.6;
+}
+
+/* =============================================================================
+   Pricing
+   ============================================================================= */
+
+.hcqb-pricing {
+	margin: 0 0 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.hcqb-price-row {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+
+.hcqb-price-label {
+	font-size: 13px;
+	color: var(--hcqb-pp-muted);
+	min-width: 120px;
+}
+
+.hcqb-price-value {
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--hcqb-pp-price-color);
+}
+
+.hcqb-price-row--assembled .hcqb-price-value {
+	font-size: 26px;
+	color: var(--hcqb-pp-accent);
+}
+
+/* Lease — price is the dominant element */
+.hcqb-price-row--lease {
+	align-items: center;
+	gap: 8px;
+}
+
+.hcqb-price-value--large {
+	font-size: 36px;
+}
+
+.hcqb-price-row--lease .hcqb-price-label {
+	font-size: 15px;
+	min-width: auto;
+}
+
+/* =============================================================================
+   Buttons
+   ============================================================================= */
+
+.hcqb-btn {
+	display: inline-block;
+	padding: 12px 28px;
+	border-radius: var(--hcqb-pp-radius);
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.2s, color 0.2s;
+	margin-bottom: 24px;
+}
+
+.hcqb-btn--quote {
+	background: var(--hcqb-pp-accent);
+	color: #fff;
+}
+
+.hcqb-btn--quote:hover,
+.hcqb-btn--quote:focus {
+	background: var(--hcqb-pp-accent-dark);
+	color: #fff;
+}
+
+.hcqb-btn--enquire {
+	background: var(--hcqb-pp-accent);
+	color: #fff;
+}
+
+.hcqb-btn--enquire:hover,
+.hcqb-btn--enquire:focus {
+	background: var(--hcqb-pp-accent-dark);
+	color: #fff;
+}
+
+/* Hidden button — config inactive. CSS only, not removed from DOM. */
+.hcqb-btn--hidden {
+	display: none;
+}
+
+/* =============================================================================
+   Features list (purchase view)
+   ============================================================================= */
+
+.hcqb-features-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.hcqb-feature {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 14px;
+}
+
+.hcqb-feature__icon {
+	width: 28px;
+	height: 28px;
+	object-fit: contain;
+	flex-shrink: 0;
+}
+
+.hcqb-feature__label {
+	color: var(--hcqb-pp-text);
+}
+
+/* =============================================================================
+   Lease terms + layout
+   ============================================================================= */
+
+.hcqb-lease-terms {
+	font-size: 14px;
+	line-height: 1.7;
+	color: var(--hcqb-pp-muted);
+	margin-bottom: 20px;
+}
+
+.hcqb-lease-layout {
+	margin-bottom: 20px;
+}
+
+.hcqb-lease-layout__title {
+	font-size: 16px;
+	font-weight: 600;
+	margin: 0 0 8px;
+}
+
+.hcqb-lease-layout__desc {
+	font-size: 14px;
+	line-height: 1.7;
+	color: var(--hcqb-pp-muted);
+}
+
+/* =============================================================================
+   Lease optional extras
+   ============================================================================= */
+
+.hcqb-lease-extras {
+	margin-bottom: 24px;
+}
+
+.hcqb-lease-extras__heading {
+	font-size: 14px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--hcqb-pp-muted);
+	margin: 0 0 10px;
+}
+
+.hcqb-lease-extras__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.hcqb-lease-extra {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 14px;
+	padding: 6px 0;
+	border-bottom: 1px solid var(--hcqb-pp-border);
+}
+
+.hcqb-lease-extra:last-child {
+	border-bottom: none;
+}
+
+.hcqb-lease-extra__price {
+	font-weight: 600;
+	white-space: nowrap;
+	margin-left: 12px;
+}
+
+/* =============================================================================
+   Expanded content sections (purchase view — below the layout)
+   ============================================================================= */
+
+.hcqb-product-description {
+	max-width: 760px;
+	margin-bottom: 32px;
+	font-size: 15px;
+	line-height: 1.8;
+}
+
+.hcqb-additional-notes {
+	max-width: 760px;
+	margin-bottom: 32px;
+	padding: 16px 20px;
+	background: #f9f9f9;
+	border-left: 4px solid var(--hcqb-pp-border);
+	border-radius: 0 var(--hcqb-pp-radius) var(--hcqb-pp-radius) 0;
+	font-size: 14px;
+	line-height: 1.7;
+}
+
+.hcqb-additional-notes h3 {
+	font-size: 14px;
+	font-weight: 600;
+	margin: 0 0 8px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--hcqb-pp-muted);
+}
+
+.hcqb-product-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 40px;
+}
+
+.hcqb-product-link {
+	display: inline-block;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--hcqb-pp-accent);
+	text-decoration: none;
+	padding: 6px 0;
+	border-bottom: 1px solid transparent;
+	transition: border-color 0.15s;
+}
+
+.hcqb-product-link:hover {
+	border-bottom-color: var(--hcqb-pp-accent);
+}
