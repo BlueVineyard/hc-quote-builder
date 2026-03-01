@@ -151,7 +151,7 @@ class HCQB_Metabox_Container {
 
 		<div class="hcqb-repeater" id="hcqb-features-repeater">
 			<div class="hcqb-repeater__list" id="hcqb-features-list">
-				<?php foreach ( $features as $feature ) :
+				<?php foreach ( $features as $feat_index => $feature ) :
 					$icon_id  = (int) ( $feature['icon_id'] ?? 0 );
 					$label    = $feature['label'] ?? '';
 					$icon_url = $icon_id ? wp_get_attachment_image_url( $icon_id, 'thumbnail' ) : '';
@@ -159,7 +159,7 @@ class HCQB_Metabox_Container {
 					<div class="hcqb-repeater__row hcqb-feature-row">
 						<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>
 						<div class="hcqb-icon-picker">
-							<input type="hidden" name="hcqb_features[][icon_id]" value="<?php echo esc_attr( $icon_id ); ?>">
+							<input type="hidden" name="hcqb_features[<?php echo $feat_index; ?>][icon_id]" value="<?php echo esc_attr( $icon_id ); ?>">
 							<?php if ( $icon_url ) : ?>
 								<img class="hcqb-icon-preview" src="<?php echo esc_url( $icon_url ); ?>" alt="" width="36" height="36">
 							<?php else : ?>
@@ -168,7 +168,7 @@ class HCQB_Metabox_Container {
 							<button type="button" class="button hcqb-choose-icon">Choose Icon</button>
 						</div>
 						<input type="text"
-						       name="hcqb_features[][label]"
+						       name="hcqb_features[<?php echo $feat_index; ?>][label]"
 						       value="<?php echo esc_attr( $label ); ?>"
 						       class="regular-text"
 						       placeholder="Feature label">
@@ -188,22 +188,28 @@ class HCQB_Metabox_Container {
 			[
 				'textarea_name' => 'hcqb_product_description',
 				'media_buttons' => false,
-				'teeny'         => true,
+				'teeny'         => false,
 				'textarea_rows' => 8,
 			]
 		);
 		?>
 
+		<?php /* ---- Additional Notes ---- */ ?>
+		<div class="hcqb-section-heading">Additional Notes</div>
+		<?php
+		wp_editor(
+			$additional_notes ?? '',
+			'hcqb_additional_notes',
+			[
+				'textarea_name' => 'hcqb_additional_notes',
+				'media_buttons' => false,
+				'teeny'         => false,
+				'textarea_rows' => 6,
+			]
+		);
+		?>
+
 		<table class="form-table hcqb-meta-table" role="presentation" style="margin-top:16px;">
-			<tr>
-				<th scope="row"><label for="hcqb_additional_notes">Additional Notes</label></th>
-				<td>
-					<textarea id="hcqb_additional_notes"
-					          name="hcqb_additional_notes"
-					          rows="3"
-					          class="large-text"><?php echo esc_textarea( $additional_notes ); ?></textarea>
-				</td>
-			</tr>
 			<tr>
 				<th scope="row">Plan Document</th>
 				<td>
@@ -308,7 +314,7 @@ class HCQB_Metabox_Container {
 			[
 				'textarea_name' => 'hcqb_lease_terms',
 				'media_buttons' => false,
-				'teeny'         => true,
+				'teeny'         => false,
 				'textarea_rows' => 6,
 			]
 		);
@@ -336,7 +342,7 @@ class HCQB_Metabox_Container {
 			[
 				'textarea_name' => 'hcqb_lease_layout_description',
 				'media_buttons' => false,
-				'teeny'         => true,
+				'teeny'         => false,
 				'textarea_rows' => 6,
 			]
 		);
@@ -348,16 +354,16 @@ class HCQB_Metabox_Container {
 
 		<div class="hcqb-repeater" id="hcqb-extras-repeater">
 			<div class="hcqb-repeater__list" id="hcqb-extras-list">
-				<?php foreach ( $extras as $extra ) : ?>
+				<?php foreach ( $extras as $extra_index => $extra ) : ?>
 					<div class="hcqb-repeater__row hcqb-extra-row">
 						<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>
 						<input type="text"
-						       name="hcqb_lease_extras[][label]"
+						       name="hcqb_lease_extras[<?php echo $extra_index; ?>][label]"
 						       value="<?php echo esc_attr( $extra['label'] ?? '' ); ?>"
 						       class="regular-text"
 						       placeholder="Extra label">
 						<input type="number"
-						       name="hcqb_lease_extras[][weekly_price]"
+						       name="hcqb_lease_extras[<?php echo $extra_index; ?>][weekly_price]"
 						       value="<?php echo esc_attr( $extra['weekly_price'] ?? '' ); ?>"
 						       class="small-text"
 						       step="0.01"
@@ -434,7 +440,7 @@ class HCQB_Metabox_Container {
 		update_post_meta( $post_id, 'hcqb_product_price',     (float) ( $_POST['hcqb_product_price'] ?? 0 ) );
 		update_post_meta( $post_id, 'hcqb_star_rating',       (float) ( $_POST['hcqb_star_rating'] ?? 0 ) );
 		update_post_meta( $post_id, 'hcqb_review_count',      absint( $_POST['hcqb_review_count'] ?? 0 ) );
-		update_post_meta( $post_id, 'hcqb_additional_notes',  sanitize_textarea_field( $_POST['hcqb_additional_notes'] ?? '' ) );
+		update_post_meta( $post_id, 'hcqb_additional_notes',  wp_kses_post( $_POST['hcqb_additional_notes'] ?? '' ) );
 		update_post_meta( $post_id, 'hcqb_plan_document',     absint( $_POST['hcqb_plan_document'] ?? 0 ) );
 		update_post_meta( $post_id, 'hcqb_shipping_details_link', esc_url_raw( $_POST['hcqb_shipping_details_link'] ?? '' ) );
 

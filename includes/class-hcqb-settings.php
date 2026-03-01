@@ -109,6 +109,7 @@ class HCQB_Settings {
 			'email'         => 'Email',
 			'quote-builder' => 'Quote Builder',
 			'form-options'  => 'Form Options',
+			'styles'        => 'Styles',
 			'instructions'  => 'Instructions',
 		];
 
@@ -140,6 +141,7 @@ class HCQB_Settings {
 					self::render_tab_email( $settings, $active_tab );
 					self::render_tab_quote_builder( $settings, $active_tab );
 					self::render_tab_form_options( $settings, $active_tab );
+					self::render_tab_styles( $settings, $active_tab );
 					?>
 				</div>
 
@@ -165,6 +167,15 @@ class HCQB_Settings {
 			'AU' => 'Australia',
 			'NZ' => 'New Zealand',
 		];
+		$default_product_id  = absint( $settings['default_product_id'] ?? 0 );
+		$all_containers      = get_posts( [
+			'post_type'      => 'hc-containers',
+			'post_status'    => 'publish',
+			'numberposts'    => -1,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'no_found_rows'  => true,
+		] );
 		?>
 		<div class="hcqb-tab-panel<?php echo $visible ? ' hcqb-tab-panel--active' : ''; ?>" id="hcqb-tab-general">
 			<table class="form-table" role="presentation">
@@ -236,6 +247,24 @@ class HCQB_Settings {
 							<?php endforeach; ?>
 						</fieldset>
 						<p class="description">Restricts address autocomplete and the phone prefix selector on the quote form.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="hcqb_default_product_id">Default Product</label>
+					</th>
+					<td>
+						<select id="hcqb_default_product_id"
+						        name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_product_id]">
+							<option value="0">— None (show error when no ?product= set) —</option>
+							<?php foreach ( $all_containers as $container ) : ?>
+								<option value="<?php echo esc_attr( $container->ID ); ?>"
+									<?php selected( $default_product_id, $container->ID ); ?>>
+									<?php echo esc_html( $container->post_title ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+						<p class="description">When the quote builder page is visited without a <code>?product=</code> parameter, this product's questionnaire loads automatically.</p>
 					</td>
 				</tr>
 			</table>
@@ -325,12 +354,40 @@ class HCQB_Settings {
 	// -------------------------------------------------------------------------
 
 	private static function render_tab_quote_builder( array $settings, string $active_tab ): void {
-		$visible       = $active_tab === 'quote-builder';
-		$pages         = get_pages( [ 'sort_column' => 'post_title', 'sort_order' => 'ASC' ] );
-		$selected_page = absint( $settings['quote_builder_page_id'] ?? 0 );
+		$visible             = $active_tab === 'quote-builder';
+		$pages               = get_pages( [ 'sort_column' => 'post_title', 'sort_order' => 'ASC' ] );
+		$selected_page       = absint( $settings['quote_builder_page_id'] ?? 0 );
+		$quote_form_layout   = $settings['quote_form_layout'] ?? 'multistep';
+		$default_config_id   = absint( $settings['default_config_id'] ?? 0 );
+		$all_configs         = get_posts( [
+			'post_type'      => 'hc-quote-configs',
+			'post_status'    => 'publish',
+			'numberposts'    => -1,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'no_found_rows'  => true,
+		] );
 		?>
 		<div class="hcqb-tab-panel<?php echo $visible ? ' hcqb-tab-panel--active' : ''; ?>" id="hcqb-tab-quote-builder">
 			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row">
+						<label for="hcqb_default_config_id">Default Config</label>
+					</th>
+					<td>
+						<select id="hcqb_default_config_id"
+						        name="<?php echo esc_attr( self::OPTION_KEY ); ?>[default_config_id]">
+							<option value="0">— No default —</option>
+							<?php foreach ( $all_configs as $cfg ) : ?>
+								<option value="<?php echo esc_attr( $cfg->ID ); ?>"
+								        <?php selected( $default_config_id, $cfg->ID ); ?>>
+									<?php echo esc_html( $cfg->post_title ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+						<p class="description">Fallback config used for any product that does not have its own linked config. The selected config must have its status set to <strong>Active</strong>.</p>
+					</td>
+				</tr>
 				<tr>
 					<th scope="row">
 						<label for="hcqb_quote_builder_page_id">Quote Builder Page</label>
@@ -347,6 +404,29 @@ class HCQB_Settings {
 							<?php endforeach; ?>
 						</select>
 						<p class="description">The page containing the <code>[hc_quote_builder]</code> shortcode.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">Form Layout</th>
+					<td>
+						<fieldset>
+							<legend class="screen-reader-text">Form Layout</legend>
+							<label>
+								<input type="radio"
+								       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[quote_form_layout]"
+								       value="multistep"
+								       <?php checked( $quote_form_layout, 'multistep' ); ?>>
+								Multi-step &mdash; show the contact form only after the customer clicks Continue
+							</label><br>
+							<label>
+								<input type="radio"
+								       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[quote_form_layout]"
+								       value="always_show"
+								       <?php checked( $quote_form_layout, 'always_show' ); ?>>
+								Always visible &mdash; display the contact form alongside the configuration questions
+							</label>
+						</fieldset>
+						<p class="description">Controls whether the contact form is shown as a second step or always visible.</p>
 					</td>
 				</tr>
 				<tr>
@@ -396,6 +476,20 @@ class HCQB_Settings {
 						          rows="5"
 						          class="large-text"><?php echo esc_textarea( $settings['privacy_fine_print'] ?? '' ); ?></textarea>
 						<p class="description">Displayed below the consent checkbox as collapsible fine print. Basic HTML allowed.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">View Angles</th>
+					<td>
+						<label>
+							<input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[show_view_angles]" value="0">
+							<input type="checkbox"
+							       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[show_view_angles]"
+							       value="1"
+							       <?php checked( $settings['show_view_angles'] ?? 0, 1 ); ?>>
+							Show Front / Side / Back / Interior view toggle in the quote builder
+						</label>
+						<p class="description">When disabled, the image preview is fixed to the Front view and the view switcher buttons are hidden.</p>
 					</td>
 				</tr>
 			</table>
@@ -475,7 +569,183 @@ class HCQB_Settings {
 	}
 
 	// -------------------------------------------------------------------------
-	// Tab 5 — Instructions (read-only reference panel — rendered outside <form>)
+	// Tab 5 — Styles
+	// Exposes CSS custom properties for the product page as editable fields.
+	// Values are stored in hcqb_settings and output via wp_add_inline_style().
+	// -------------------------------------------------------------------------
+
+	private static function render_tab_styles( array $settings, string $active_tab ): void {
+		$visible = $active_tab === 'styles';
+
+		// Resolve values — settings already merged with defaults via wp_parse_args.
+		$brand       = $settings['style_pp_brand']      ?? '#ED1C23';
+		$brand_dark  = $settings['style_pp_brand_dark'] ?? '#c4151a';
+		$border      = $settings['style_pp_border']     ?? '#e2e2e2';
+		$text        = $settings['style_pp_text']        ?? '#1d2327';
+		$muted       = $settings['style_pp_muted']       ?? '#6b7280';
+		$bg          = $settings['style_pp_bg']          ?? '#ffffff';
+		$bg_alt      = $settings['style_pp_bg_alt']      ?? '#f6f7f7';
+		$star_full   = $settings['style_pp_star_full']   ?? '#f0a500';
+		$star_empty  = $settings['style_pp_star_empty']  ?? '#dcdcdc';
+		$max         = $settings['style_pp_max']         ?? '1100px';
+		$gap         = $settings['style_pp_gap']         ?? '40px';
+		$gallery     = $settings['style_pp_gallery']     ?? '50%';
+		$radius      = $settings['style_pp_radius']      ?? '8px';
+		?>
+		<div class="hcqb-tab-panel<?php echo $visible ? ' hcqb-tab-panel--active' : ''; ?>" id="hcqb-tab-styles">
+			<p>These values override the CSS custom properties on the product page. Changes take effect immediately after saving.</p>
+
+			<h2>Colours</h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_brand">Brand Colour</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_brand"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_brand]"
+						       value="<?php echo esc_attr( $brand ); ?>">
+						<p class="description">Primary brand colour — buttons, icons, accents. CSS variable: <code>--hcqb-pp-brand</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_brand_dark">Brand Colour (Dark)</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_brand_dark"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_brand_dark]"
+						       value="<?php echo esc_attr( $brand_dark ); ?>">
+						<p class="description">Darker variant — hover states on brand elements. CSS variable: <code>--hcqb-pp-brand-dark</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_text">Text Colour</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_text"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_text]"
+						       value="<?php echo esc_attr( $text ); ?>">
+						<p class="description">Primary body text colour. CSS variable: <code>--hcqb-pp-text</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_muted">Muted Text Colour</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_muted"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_muted]"
+						       value="<?php echo esc_attr( $muted ); ?>">
+						<p class="description">Secondary / helper text. CSS variable: <code>--hcqb-pp-muted</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_border">Border Colour</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_border"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_border]"
+						       value="<?php echo esc_attr( $border ); ?>">
+						<p class="description">Dividers and border lines. CSS variable: <code>--hcqb-pp-border</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_bg">Background</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_bg"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_bg]"
+						       value="<?php echo esc_attr( $bg ); ?>">
+						<p class="description">Main page background. CSS variable: <code>--hcqb-pp-bg</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_bg_alt">Background (Alt)</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_bg_alt"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_bg_alt]"
+						       value="<?php echo esc_attr( $bg_alt ); ?>">
+						<p class="description">Alternate background — cards, tab fills. CSS variable: <code>--hcqb-pp-bg-alt</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_star_full">Star Colour (Filled)</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_star_full"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_star_full]"
+						       value="<?php echo esc_attr( $star_full ); ?>">
+						<p class="description">Filled star in the rating display. CSS variable: <code>--hcqb-pp-star-full</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_star_empty">Star Colour (Empty)</label></th>
+					<td>
+						<input type="color"
+						       id="hcqb_style_pp_star_empty"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_star_empty]"
+						       value="<?php echo esc_attr( $star_empty ); ?>">
+						<p class="description">Empty star in the rating display. CSS variable: <code>--hcqb-pp-star-empty</code></p>
+					</td>
+				</tr>
+			</table>
+
+			<h2>Layout</h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_max">Max Content Width</label></th>
+					<td>
+						<input type="text"
+						       id="hcqb_style_pp_max"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_max]"
+						       value="<?php echo esc_attr( $max ); ?>"
+						       class="small-text"
+						       placeholder="1100px">
+						<p class="description">Maximum width of the product page content area. CSS variable: <code>--hcqb-pp-max</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_gap">Column Gap</label></th>
+					<td>
+						<input type="text"
+						       id="hcqb_style_pp_gap"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_gap]"
+						       value="<?php echo esc_attr( $gap ); ?>"
+						       class="small-text"
+						       placeholder="40px">
+						<p class="description">Gap between the gallery and details columns. CSS variable: <code>--hcqb-pp-gap</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_gallery">Gallery Column Width</label></th>
+					<td>
+						<input type="text"
+						       id="hcqb_style_pp_gallery"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_gallery]"
+						       value="<?php echo esc_attr( $gallery ); ?>"
+						       class="small-text"
+						       placeholder="50%">
+						<p class="description">Width of the gallery column (e.g. <code>50%</code>, <code>420px</code>). CSS variable: <code>--hcqb-pp-gallery</code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="hcqb_style_pp_radius">Border Radius</label></th>
+					<td>
+						<input type="text"
+						       id="hcqb_style_pp_radius"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[style_pp_radius]"
+						       value="<?php echo esc_attr( $radius ); ?>"
+						       class="small-text"
+						       placeholder="8px">
+						<p class="description">Border radius for cards and buttons. CSS variable: <code>--hcqb-pp-radius</code></p>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<?php
+	}
+
+	// -------------------------------------------------------------------------
+	// Tab 6 — Instructions (read-only reference panel — rendered outside <form>)
 	// -------------------------------------------------------------------------
 
 	private static function render_tab_instructions( string $active_tab ): void {
@@ -632,53 +902,132 @@ class HCQB_Settings {
 			<details class="hcqb-accordion">
 				<summary class="hcqb-accordion__trigger">PHP Snippets — Direct Meta Access</summary>
 				<div class="hcqb-accordion__body">
-					<p class="description">Use these in theme templates, child theme files, or custom PHP. Replace <code>$post_id</code> with the relevant integer ID (e.g. <code>get_the_ID()</code> inside a loop).</p>
+					<p class="description">Use these in theme templates, child theme files, or custom PHP. Replace <code>$post_id</code> with the relevant integer ID (e.g. <code>get_the_ID()</code> inside a loop). Fields that return arrays (gallery, features, extras) need a <code>foreach</code> loop — see the dedicated examples below.</p>
 
-					<h3>Product Info</h3>
+					<h3>Scalar Fields — Simple Values</h3>
 					<pre class="hcqb-code-block"><code><?php echo esc_html(
-						"// Post title\n" .
+						"// Post title — plain text\n" .
 						"get_the_title( \$post_id );\n\n" .
 						"// Base (flat-pack) price — stored as float\n" .
-						"\$price = (float) get_post_meta( \$post_id, 'hcqb_product_price', true );\n\n" .
-						"// Star rating — float 0.0–5.0 (supports half-star)\n" .
+						"\$price = (float) get_post_meta( \$post_id, 'hcqb_product_price', true );\n" .
+						"echo '\$' . number_format( \$price, 2 );  // e.g. \$7,500.00\n\n" .
+						"// Star rating — float 0.0–5.0 (half-star supported, e.g. 4.5)\n" .
 						"\$rating = (float) get_post_meta( \$post_id, 'hcqb_star_rating', true );\n\n" .
 						"// Review count — integer\n" .
 						"\$count = absint( get_post_meta( \$post_id, 'hcqb_review_count', true ) );\n\n" .
 						"// Short description — plain text\n" .
-						"\$short = get_post_meta( \$post_id, 'hcqb_short_description', true );\n\n" .
-						"// Full product description — rich text / HTML (pass through wp_kses_post before output)\n" .
-						"\$desc = get_post_meta( \$post_id, 'hcqb_product_description', true );\n\n" .
+						"\$short = get_post_meta( \$post_id, 'hcqb_short_description', true );\n" .
+						"echo esc_html( \$short );\n\n" .
+						"// Full description — rich HTML; always sanitise before output\n" .
+						"\$desc = get_post_meta( \$post_id, 'hcqb_product_description', true );\n" .
+						"echo wp_kses_post( \$desc );\n\n" .
 						"// Additional notes — plain text\n" .
 						"\$notes = get_post_meta( \$post_id, 'hcqb_additional_notes', true );\n\n" .
-						"// Gallery — ordered array of attachment IDs\n" .
-						"\$ids = (array) ( get_post_meta( \$post_id, 'hcqb_product_images', true ) ?: [] );\n\n" .
-						"// Features — array of [ 'icon_id' => int, 'label' => string ]\n" .
-						"\$features = (array) ( get_post_meta( \$post_id, 'hcqb_features', true ) ?: [] );\n\n" .
-						"// Plan document — attachment ID; use wp_get_attachment_url() for the download link\n" .
+						"// Plan document — attachment ID (0 when none is set)\n" .
 						"\$doc_id  = absint( get_post_meta( \$post_id, 'hcqb_plan_document', true ) );\n" .
 						"\$doc_url = \$doc_id ? wp_get_attachment_url( \$doc_id ) : '';\n\n" .
-						"// Shipping details link — URL string\n" .
-						"\$shipping = get_post_meta( \$post_id, 'hcqb_shipping_details_link', true );"
+						"// Shipping details link — URL string (empty when unset)\n" .
+						"\$shipping_url = get_post_meta( \$post_id, 'hcqb_shipping_details_link', true );"
 					); ?></code></pre>
 
-					<h3>Lease Fields</h3>
+					<h3>Gallery Images — Loop Example</h3>
+					<p class="description">The gallery is stored as a plain indexed array of WordPress attachment IDs, in the display order set via drag-and-drop in the admin.</p>
 					<pre class="hcqb-code-block"><code><?php echo esc_html(
-						"// Lease enabled — 1 or 0\n" .
+						"// Fetch the gallery — returns [] when no images are saved.\n" .
+						"\$ids = (array) ( get_post_meta( \$post_id, 'hcqb_product_images', true ) ?: [] );\n\n" .
+						"// Primary / hero image — always the first item in the array\n" .
+						"\$primary_id  = \$ids[0] ?? 0;\n" .
+						"\$primary_url = \$primary_id ? wp_get_attachment_image_url( \$primary_id, 'full' ) : '';\n\n" .
+						"// Loop — render every image\n" .
+						"foreach ( \$ids as \$img_id ) {\n" .
+						"    // wp_get_attachment_image() returns a complete <img> tag\n" .
+						"    // with srcset, sizes, and the alt text stored in the Media Library.\n" .
+						"    echo wp_get_attachment_image( \$img_id, 'large' );\n" .
+						"}\n\n" .
+						"// Alternatively, fetch just the URL (e.g. for a CSS background-image):\n" .
+						"foreach ( \$ids as \$img_id ) {\n" .
+						"    \$url = wp_get_attachment_image_url( \$img_id, 'large' );\n" .
+						"    if ( \$url ) {\n" .
+						"        echo '<img src=\"' . esc_url( \$url ) . '\" alt=\"\">';\n" .
+						"    }\n" .
+						"}"
+					); ?></code></pre>
+
+					<h3>Product Features — Loop Example</h3>
+					<p class="description">Features are stored as a sequential array of associative arrays. Each row has exactly two keys: <code>icon_id</code> (attachment ID, 0 when unset) and <code>label</code> (string).</p>
+					<pre class="hcqb-code-block"><code><?php echo esc_html(
+						"\$features = (array) ( get_post_meta( \$post_id, 'hcqb_features', true ) ?: [] );\n\n" .
+						"// Structure of \$features:\n" .
+						"// [\n" .
+						"//   0 => [ 'icon_id' => 45, 'label' => 'Fully insulated' ],\n" .
+						"//   1 => [ 'icon_id' => 0,  'label' => 'Lockable door'   ],\n" .
+						"//   ...\n" .
+						"// ]\n\n" .
+						"if ( \$features ) {\n" .
+						"    echo '<ul class=\"hcqb-features-list\">';\n\n" .
+						"    foreach ( \$features as \$feat ) {\n" .
+						"        \$label   = \$feat['label']   ?? '';\n" .
+						"        \$icon_id = absint( \$feat['icon_id'] ?? 0 );\n\n" .
+						"        echo '<li class=\"hcqb-feature\">';\n\n" .
+						"        // Icon — optional; wrap in brand-coloured circular badge\n" .
+						"        if ( \$icon_id ) {\n" .
+						"            \$icon_url = wp_get_attachment_image_url( \$icon_id, 'thumbnail' );\n" .
+						"            if ( \$icon_url ) {\n" .
+						"                echo '<span class=\"hcqb-feature__icon-wrap\">';\n" .
+						"                echo '<img src=\"' . esc_url( \$icon_url ) . '\"';\n" .
+						"                echo ' class=\"hcqb-feature__icon\" alt=\"\" width=\"20\" height=\"20\">';\n" .
+						"                echo '</span>';\n" .
+						"            }\n" .
+						"        }\n\n" .
+						"        echo '<span class=\"hcqb-feature__label\">' . esc_html( \$label ) . '</span>';\n" .
+						"        echo '</li>';\n" .
+						"    }\n\n" .
+						"    echo '</ul>';\n" .
+						"}"
+					); ?></code></pre>
+
+					<h3>Lease Scalar Fields</h3>
+					<pre class="hcqb-code-block"><code><?php echo esc_html(
+						"// Always check lease is enabled before rendering lease content\n" .
 						"\$lease_on = (bool) get_post_meta( \$post_id, 'hcqb_lease_enabled', true );\n\n" .
-						"// Lease price — float\n" .
-						"\$lease_price = (float) get_post_meta( \$post_id, 'hcqb_lease_price', true );\n\n" .
-						"// Lease price label — plain text, e.g. \"per week\"\n" .
-						"\$label = get_post_meta( \$post_id, 'hcqb_lease_price_label', true ) ?: 'per week';\n\n" .
-						"// Lease terms — rich text / HTML\n" .
-						"\$terms = get_post_meta( \$post_id, 'hcqb_lease_terms', true );\n\n" .
-						"// Standard layout title — plain text\n" .
-						"\$layout_title = get_post_meta( \$post_id, 'hcqb_lease_layout_title', true );\n\n" .
-						"// Standard layout description — rich text / HTML\n" .
-						"\$layout_desc  = get_post_meta( \$post_id, 'hcqb_lease_layout_description', true );\n\n" .
-						"// Optional extras — array of [ 'label' => string, 'weekly_price' => float ]\n" .
+						"if ( \$lease_on ) {\n" .
+						"    // Lease price — float\n" .
+						"    \$lease_price = (float) get_post_meta( \$post_id, 'hcqb_lease_price', true );\n" .
+						"    echo '\$' . number_format( \$lease_price, 2 );  // e.g. \$299.00\n\n" .
+						"    // Lease price label — plain text (defaults to 'per week')\n" .
+						"    \$lease_label = get_post_meta( \$post_id, 'hcqb_lease_price_label', true ) ?: 'per week';\n\n" .
+						"    // Lease terms — rich HTML\n" .
+						"    \$terms = get_post_meta( \$post_id, 'hcqb_lease_terms', true );\n" .
+						"    echo wp_kses_post( \$terms );\n\n" .
+						"    // Standard layout title — plain text\n" .
+						"    \$layout_title = get_post_meta( \$post_id, 'hcqb_lease_layout_title', true );\n\n" .
+						"    // Standard layout description — rich HTML\n" .
+						"    \$layout_desc = get_post_meta( \$post_id, 'hcqb_lease_layout_description', true );\n" .
+						"    echo wp_kses_post( \$layout_desc );\n\n" .
+						"    // Enquiry button label — plain text\n" .
+						"    \$btn = get_post_meta( \$post_id, 'hcqb_enquiry_button_label', true ) ?: 'Enquire Now';\n" .
+						"}"
+					); ?></code></pre>
+
+					<h3>Optional Extras — Loop Example</h3>
+					<p class="description">Extras are stored as a sequential array of associative arrays. Each row has <code>label</code> (string) and <code>weekly_price</code> (float).</p>
+					<pre class="hcqb-code-block"><code><?php echo esc_html(
 						"\$extras = (array) ( get_post_meta( \$post_id, 'hcqb_lease_extras', true ) ?: [] );\n\n" .
-						"// Enquiry button label — plain text\n" .
-						"\$btn = get_post_meta( \$post_id, 'hcqb_enquiry_button_label', true ) ?: 'Enquire Now';"
+						"// Structure of \$extras:\n" .
+						"// [\n" .
+						"//   0 => [ 'label' => 'Climate control pack', 'weekly_price' => 12.50 ],\n" .
+						"//   1 => [ 'label' => 'Security upgrade',     'weekly_price' => 8.00  ],\n" .
+						"//   ...\n" .
+						"// ]\n\n" .
+						"if ( \$extras ) {\n" .
+						"    echo '<ul>';\n\n" .
+						"    foreach ( \$extras as \$extra ) {\n" .
+						"        \$label = esc_html( \$extra['label']        ?? '' );\n" .
+						"        \$price = number_format( (float) ( \$extra['weekly_price'] ?? 0 ), 2 );\n\n" .
+						"        echo '<li>' . \$label . ' — \$' . \$price . ' / week</li>';\n" .
+						"    }\n\n" .
+						"    echo '</ul>';\n" .
+						"}"
 					); ?></code></pre>
 
 					<h3>Assembled Price (computed — not stored)</h3>
@@ -737,6 +1086,97 @@ class HCQB_Settings {
 				</div>
 			</details>
 
+		<?php /* ----- Panel 4: Taxonomies ----- */ ?>
+		<details class="hcqb-accordion">
+			<summary class="hcqb-accordion__trigger">Taxonomies — Container Categories</summary>
+			<div class="hcqb-accordion__body">
+				<p class="description">Container products use the <code>hc-container-category</code> taxonomy. The examples below use standard WordPress functions — no plugin-specific helpers are needed.</p>
+
+				<h3>Get Categories for a Single Product</h3>
+				<p class="description"><code>get_the_terms()</code> returns an array of <code>WP_Term</code> objects, <code>false</code> if none are assigned, or a <code>WP_Error</code>. Always check the return value before looping.</p>
+				<pre class="hcqb-code-block"><code><?php echo esc_html(
+					"// Fetch all categories assigned to this product\n" .
+					"\$terms = get_the_terms( \$post_id, 'hc-container-category' );\n\n" .
+					"if ( \$terms && ! is_wp_error( \$terms ) ) {\n" .
+					"    foreach ( \$terms as \$term ) {\n" .
+					"        echo esc_html( \$term->name );            // e.g. 'Office Containers'\n" .
+					"        echo esc_html( \$term->slug );            // e.g. 'office-containers'\n" .
+					"        echo absint( \$term->term_id );           // e.g. 12\n" .
+					"        echo esc_url( get_term_link( \$term ) );  // category archive URL\n" .
+					"    }\n" .
+					"}\n\n" .
+					"// Shortcut — render a comma-separated list of linked category names:\n" .
+					"\$links = get_the_term_list( \$post_id, 'hc-container-category', '', ', ' );\n" .
+					"if ( \$links && ! is_wp_error( \$links ) ) {\n" .
+					"    echo wp_kses_post( \$links );\n" .
+					"    // Outputs: <a href=\"...\">Office</a>, <a href=\"...\">Storage</a>\n" .
+					"}"
+				); ?></code></pre>
+
+				<h3>Get All Categories (for Filters / Navigation)</h3>
+				<p class="description"><code>get_terms()</code> retrieves every term in the taxonomy regardless of which post is being viewed. Set <code>hide_empty</code> to <code>true</code> to skip categories with no published products.</p>
+				<pre class="hcqb-code-block"><code><?php echo esc_html(
+					"\$all_terms = get_terms( [\n" .
+					"    'taxonomy'   => 'hc-container-category',\n" .
+					"    'hide_empty' => true,   // omit categories with no published products\n" .
+					"    'orderby'    => 'name',\n" .
+					"    'order'      => 'ASC',\n" .
+					"] );\n\n" .
+					"if ( \$all_terms && ! is_wp_error( \$all_terms ) ) {\n" .
+					"    foreach ( \$all_terms as \$term ) {\n" .
+					"        echo esc_html( \$term->name );            // term name\n" .
+					"        echo absint( \$term->count );             // number of products\n" .
+					"        echo esc_url( get_term_link( \$term ) );  // archive page URL\n" .
+					"    }\n" .
+					"}"
+				); ?></code></pre>
+
+				<h3>Query Products by Category</h3>
+				<p class="description">Use <code>WP_Query</code> with a <code>tax_query</code> argument to fetch products belonging to a specific category. Remember to call <code>wp_reset_postdata()</code> after the loop.</p>
+				<pre class="hcqb-code-block"><code><?php echo esc_html(
+					"// --- By category slug ---\n" .
+					"\$query = new WP_Query( [\n" .
+					"    'post_type'      => 'hc-containers',\n" .
+					"    'post_status'    => 'publish',\n" .
+					"    'posts_per_page' => 12,\n" .
+					"    'tax_query'      => [\n" .
+					"        [\n" .
+					"            'taxonomy' => 'hc-container-category',\n" .
+					"            'field'    => 'slug',\n" .
+					"            'terms'    => 'office-containers',  // single slug\n" .
+					"        ],\n" .
+					"    ],\n" .
+					"] );\n\n" .
+					"while ( \$query->have_posts() ) {\n" .
+					"    \$query->the_post();\n" .
+					"    \$post_id = get_the_ID();\n" .
+					"    // ... use meta helpers above\n" .
+					"}\n" .
+					"wp_reset_postdata();\n\n" .
+					"// --- By term ID (match any of several categories) ---\n" .
+					"\$query = new WP_Query( [\n" .
+					"    'post_type'  => 'hc-containers',\n" .
+					"    'tax_query'  => [\n" .
+					"        [\n" .
+					"            'taxonomy' => 'hc-container-category',\n" .
+					"            'field'    => 'term_id',\n" .
+					"            'terms'    => [ 12, 15 ],  // products in either category\n" .
+					"            'operator' => 'IN',        // 'IN' | 'NOT IN' | 'AND'\n" .
+					"        ],\n" .
+					"    ],\n" .
+					"] );"
+				); ?></code></pre>
+
+				<h3>Check Whether a Product Belongs to a Category</h3>
+				<pre class="hcqb-code-block"><code><?php echo esc_html(
+					"// Returns true if the product is in the given category (slug, ID, or name)\n" .
+					"if ( has_term( 'office-containers', 'hc-container-category', \$post_id ) ) {\n" .
+					"    // product is in the 'Office Containers' category\n" .
+					"}"
+				); ?></code></pre>
+			</div>
+		</details>
+
 		</div>
 		<?php
 	}
@@ -759,6 +1199,7 @@ class HCQB_Settings {
 		$clean['warehouse_address']   = sanitize_text_field( $raw['warehouse_address']   ?? '' );
 		$clean['warehouse_lat']       = sanitize_text_field( $raw['warehouse_lat']       ?? '' );
 		$clean['warehouse_lng']       = sanitize_text_field( $raw['warehouse_lng']       ?? '' );
+		$clean['default_product_id']  = absint( $raw['default_product_id']               ?? 0 );
 
 		$allowed_countries       = [ 'AU', 'NZ' ];
 		$submitted_countries     = (array) ( $raw['supported_countries'] ?? [] );
@@ -777,11 +1218,17 @@ class HCQB_Settings {
 		$clean['customer_email_subject'] = sanitize_text_field( $raw['customer_email_subject'] ?? '' );
 
 		// ---- Tab 3 — Quote Builder ----
+		$clean['default_config_id']     = absint( $raw['default_config_id']     ?? 0 );
 		$clean['quote_builder_page_id'] = absint( $raw['quote_builder_page_id'] ?? 0 );
+		$allowed_layouts                = [ 'multistep', 'always_show' ];
+		$clean['quote_form_layout']     = in_array( $raw['quote_form_layout'] ?? '', $allowed_layouts, true )
+			? $raw['quote_form_layout']
+			: 'multistep';
 		$clean['product_change_alert']  = sanitize_text_field( $raw['product_change_alert'] ?? '' );
 		$clean['submit_button_label']   = sanitize_text_field( $raw['submit_button_label']  ?? '' );
 		$clean['consent_text']          = sanitize_text_field( $raw['consent_text']          ?? '' );
 		$clean['privacy_fine_print']    = wp_kses_post( $raw['privacy_fine_print']          ?? '' );
+		$clean['show_view_angles']      = absint( $raw['show_view_angles'] ?? 0 ) ? 1 : 0;
 
 		// ---- Tab 4 — Prefix options ----
 		$clean['prefix_options'] = [];
@@ -809,6 +1256,25 @@ class HCQB_Settings {
 			$clean['submission_status_labels'] = self::defaults()['submission_status_labels'];
 		}
 
+		// ---- Tab 5 — Styles ----
+		$color_keys = [
+			'style_pp_brand', 'style_pp_brand_dark', 'style_pp_border',
+			'style_pp_text',  'style_pp_muted',       'style_pp_bg',
+			'style_pp_bg_alt', 'style_pp_star_full',  'style_pp_star_empty',
+		];
+		foreach ( $color_keys as $key ) {
+			// sanitize_hex_color returns null on invalid value; fall back to default.
+			$sanitized        = sanitize_hex_color( $raw[ $key ] ?? '' );
+			$clean[ $key ]    = $sanitized ?? self::defaults()[ $key ];
+		}
+
+		$dim_keys = [ 'style_pp_max', 'style_pp_gap', 'style_pp_gallery', 'style_pp_radius' ];
+		foreach ( $dim_keys as $key ) {
+			$val           = sanitize_text_field( $raw[ $key ] ?? '' );
+			// Allow only safe CSS dimension values: digits + optional decimal + unit.
+			$clean[ $key ] = preg_match( '/^[\d.]+(px|%|em|rem|vw|vh)$/', $val ) ? $val : self::defaults()[ $key ];
+		}
+
 		return $clean;
 	}
 
@@ -824,6 +1290,7 @@ class HCQB_Settings {
 			'warehouse_lat'       => '',
 			'warehouse_lng'       => '',
 			'supported_countries' => [ 'AU' ],
+			'default_product_id'  => 0,
 			// Email
 			'admin_email'            => get_option( 'admin_email', '' ),
 			'from_name'              => get_option( 'blogname', '' ),
@@ -831,11 +1298,14 @@ class HCQB_Settings {
 			'admin_email_subject'    => 'New Quote Request — {product_name}',
 			'customer_email_subject' => 'Your Quote Request — {product_name}',
 			// Quote Builder
+			'default_config_id'     => 0,
 			'quote_builder_page_id' => 0,
+			'quote_form_layout'     => 'multistep',
 			'product_change_alert'  => 'Changing the product will reset your current selections. Continue?',
 			'submit_button_label'   => 'Submit Quote Request',
 			'consent_text'          => 'I agree to be contacted regarding this quote request.',
 			'privacy_fine_print'    => '',
+			'show_view_angles'      => 0,
 			// Form Options
 			'prefix_options'           => [ 'Mr', 'Mrs', 'Ms', 'Dr' ],
 			'submission_status_labels' => [
@@ -843,6 +1313,20 @@ class HCQB_Settings {
 				[ 'key' => 'status_2', 'label' => 'Contacted' ],
 				[ 'key' => 'status_3', 'label' => 'Closed'    ],
 			],
+			// Styles — CSS custom property defaults matching hcqb-product-page.css
+			'style_pp_brand'      => '#ED1C23',
+			'style_pp_brand_dark' => '#c4151a',
+			'style_pp_border'     => '#e2e2e2',
+			'style_pp_text'       => '#1d2327',
+			'style_pp_muted'      => '#6b7280',
+			'style_pp_bg'         => '#ffffff',
+			'style_pp_bg_alt'     => '#f6f7f7',
+			'style_pp_star_full'  => '#f0a500',
+			'style_pp_star_empty' => '#dcdcdc',
+			'style_pp_max'        => '1100px',
+			'style_pp_gap'        => '40px',
+			'style_pp_gallery'    => '50%',
+			'style_pp_radius'     => '8px',
 		];
 	}
 }

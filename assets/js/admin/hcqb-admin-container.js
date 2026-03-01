@@ -15,6 +15,10 @@
 ( function () {
 	'use strict';
 
+	// Index counters for repeater input names — must match PHP-rendered row counts on load.
+	let nextFeatureIdx = 0;
+	let nextExtraIdx   = 0;
+
 	// =========================================================================
 	// Tab switching
 	// =========================================================================
@@ -203,11 +207,14 @@
 		const list   = document.getElementById( 'hcqb-features-list' );
 		if ( ! addBtn || ! list ) return;
 
+		// Start counter after all PHP-rendered rows so new rows get unique indices.
+		nextFeatureIdx = list.querySelectorAll( '.hcqb-feature-row' ).length;
+
 		// Init existing rows.
 		list.querySelectorAll( '.hcqb-feature-row' ).forEach( initFeatureRow );
 
 		addBtn.addEventListener( 'click', function () {
-			const row = buildFeatureRow( 0, '', '' );
+			const row = buildFeatureRow( 0, '', '', nextFeatureIdx++ );
 			list.appendChild( row );
 			initFeatureRow( row );
 		} );
@@ -234,7 +241,7 @@
 		initDragRow( row );
 	}
 
-	function buildFeatureRow( iconId, iconUrl, label ) {
+	function buildFeatureRow( iconId, iconUrl, label, idx ) {
 		const row = document.createElement( 'div' );
 		row.className = 'hcqb-repeater__row hcqb-feature-row';
 
@@ -245,11 +252,11 @@
 		row.innerHTML =
 			'<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>' +
 			'<div class="hcqb-icon-picker">' +
-				'<input type="hidden" name="hcqb_features[][icon_id]" value="' + ( iconId || 0 ) + '">' +
+				'<input type="hidden" name="hcqb_features[' + idx + '][icon_id]" value="' + ( iconId || 0 ) + '">' +
 				iconMarkup +
 				'<button type="button" class="button hcqb-choose-icon">Choose Icon</button>' +
 			'</div>' +
-			'<input type="text" name="hcqb_features[][label]" value="' + escAttr( label ) + '" class="regular-text" placeholder="Feature label">' +
+			'<input type="text" name="hcqb_features[' + idx + '][label]" value="' + escAttr( label ) + '" class="regular-text" placeholder="Feature label">' +
 			'<button type="button" class="button hcqb-repeater__remove">Remove</button>';
 
 		return row;
@@ -269,8 +276,8 @@
 				? attachment.sizes.thumbnail.url
 				: attachment.url;
 
-			// Update hidden input.
-			const hiddenInput = row.querySelector( 'input[name="hcqb_features[][icon_id]"]' );
+			// Update hidden input (name format: hcqb_features[N][icon_id]).
+			const hiddenInput = row.querySelector( 'input[name$="[icon_id]"]' );
 			if ( hiddenInput ) hiddenInput.value = attachment.id;
 
 			// Update or create preview image.
@@ -358,11 +365,14 @@
 		const list   = document.getElementById( 'hcqb-extras-list' );
 		if ( ! addBtn || ! list ) return;
 
+		// Start counter after all PHP-rendered rows so new rows get unique indices.
+		nextExtraIdx = list.querySelectorAll( '.hcqb-extra-row' ).length;
+
 		// Init existing rows.
 		list.querySelectorAll( '.hcqb-extra-row' ).forEach( initExtraRow );
 
 		addBtn.addEventListener( 'click', function () {
-			const row = buildExtraRow( '', '' );
+			const row = buildExtraRow( '', '', nextExtraIdx++ );
 			list.appendChild( row );
 			initExtraRow( row );
 		} );
@@ -378,13 +388,13 @@
 		initDragRow( row );
 	}
 
-	function buildExtraRow( label, price ) {
+	function buildExtraRow( label, price, idx ) {
 		const row = document.createElement( 'div' );
 		row.className = 'hcqb-repeater__row hcqb-extra-row';
 		row.innerHTML =
 			'<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>' +
-			'<input type="text" name="hcqb_lease_extras[][label]" value="' + escAttr( label ) + '" class="regular-text" placeholder="Extra label">' +
-			'<input type="number" name="hcqb_lease_extras[][weekly_price]" value="' + escAttr( price ) + '" class="small-text" step="0.01" min="0" placeholder="0.00">' +
+			'<input type="text" name="hcqb_lease_extras[' + idx + '][label]" value="' + escAttr( label ) + '" class="regular-text" placeholder="Extra label">' +
+			'<input type="number" name="hcqb_lease_extras[' + idx + '][weekly_price]" value="' + escAttr( price ) + '" class="small-text" step="0.01" min="0" placeholder="0.00">' +
 			'<span class="hcqb-extras-unit">/ week</span>' +
 			'<button type="button" class="button hcqb-repeater__remove">Remove</button>';
 		return row;

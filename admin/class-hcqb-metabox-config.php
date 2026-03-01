@@ -64,9 +64,14 @@ class HCQB_Metabox_Config {
 	public static function render_meta_box_info( WP_Post $post ): void {
 		wp_nonce_field( 'hcqb_save_config_' . $post->ID, 'hcqb_config_nonce' );
 
-		$status         = get_post_meta( $post->ID, 'hcqb_config_status', true ) ?: 'inactive';
-		$linked_product = (int) get_post_meta( $post->ID, 'hcqb_linked_product', true );
-		$taken_ids      = self::get_taken_product_ids( $post->ID );
+		$status            = get_post_meta( $post->ID, 'hcqb_config_status',    true ) ?: 'inactive';
+		$linked_product    = (int)   get_post_meta( $post->ID, 'hcqb_linked_product',   true );
+		$base_price        = (float) get_post_meta( $post->ID, 'hcqb_base_price',        true );
+		$default_image_id  = absint(  get_post_meta( $post->ID, 'hcqb_default_image_id', true ) );
+		$default_image_url = $default_image_id
+			? ( wp_get_attachment_image_url( $default_image_id, 'thumbnail' ) ?: '' )
+			: '';
+		$taken_ids         = self::get_taken_product_ids( $post->ID );
 
 		$containers = get_posts( [
 			'post_type'      => 'hc-containers',
@@ -109,6 +114,36 @@ class HCQB_Metabox_Config {
 						<?php endforeach; ?>
 					</select>
 					<p class="description">One product may be linked to only one config.</p>
+				</td>
+			</tr>
+			<tr>
+				<th><label for="hcqb_base_price">Base Price</label></th>
+				<td>
+					<span style="line-height:30px;">$&nbsp;</span><input type="number"
+					       id="hcqb_base_price" name="hcqb_base_price"
+					       value="<?php echo esc_attr( $base_price ); ?>"
+					       min="0" step="0.01" style="width:110px;">
+					<p class="description">Starting price shown in the builder when used in standalone mode (no <code>?product=</code>).</p>
+				</td>
+			</tr>
+			<tr>
+				<th>Default Image</th>
+				<td>
+					<div id="hcqb-default-image-wrap" style="margin-bottom:8px;">
+						<?php if ( $default_image_url ) : ?>
+						<img src="<?php echo esc_url( $default_image_url ); ?>"
+						     width="60" height="60"
+						     style="object-fit:cover;border-radius:4px;display:block;">
+						<?php else : ?>
+						<span style="color:#999;font-size:12px;">No image selected</span>
+						<?php endif; ?>
+					</div>
+					<input type="hidden" name="hcqb_default_image_id" id="hcqb_default_image_id"
+					       value="<?php echo esc_attr( $default_image_id ?: 0 ); ?>">
+					<button type="button" class="button" id="hcqb-choose-default-image">Choose Image</button>
+					<button type="button" class="button" id="hcqb-remove-default-image"
+					        <?php echo $default_image_id ? '' : 'style="display:none;"'; ?>>Remove</button>
+					<p class="description">Preview image shown before any option is selected (standalone mode only).</p>
 				</td>
 			</tr>
 		</table>
@@ -354,6 +389,15 @@ class HCQB_Metabox_Config {
 			Each rule assigns an image to a product view when a specific set of option tags is active.
 			Rules are evaluated in order — the first matching rule wins. Drag to reorder.
 		</p>
+		<?php if ( ! hcqb_get_setting( 'show_view_angles' ) ) : ?>
+		<div class="notice notice-warning inline" style="margin:8px 0;">
+			<p>
+				<strong>View angles are currently disabled.</strong>
+				The Front / Side / Back / Interior toggle will not appear on the quote builder.
+				You can enable it under <a href="<?php echo esc_url( admin_url( 'admin.php?page=hc-quote-builder&tab=quote-builder' ) ); ?>">Settings &rarr; Quote Builder &rarr; View Angles</a>.
+			</p>
+		</div>
+		<?php endif; ?>
 		<div class="hcqb-image-rules-wrap">
 			<div class="hcqb-image-rules-list" id="hcqb-image-rules-list">
 				<?php foreach ( $rules as $idx => $rule ) : ?>
@@ -362,6 +406,9 @@ class HCQB_Metabox_Config {
 			</div>
 			<button type="button" class="button button-primary" id="hcqb-add-image-rule">
 				+ Add Image Rule
+			</button>
+			<button type="button" class="button" id="hcqb-generate-image-rules">
+				&#x21ba; Generate Combinations
 			</button>
 		</div>
 		<script>window.hcqbTagOptions = <?php echo wp_json_encode( $tag_options ); ?>;</script>
@@ -483,6 +530,13 @@ class HCQB_Metabox_Config {
 			$product_id = 0;
 		}
 		update_post_meta( $post_id, 'hcqb_linked_product', $product_id );
+
+		// Standalone mode fields.
+		$base_price = max( 0.0, (float) ( $_POST['hcqb_base_price'] ?? 0 ) );
+		update_post_meta( $post_id, 'hcqb_base_price', $base_price );
+
+		$default_image_id = absint( $_POST['hcqb_default_image_id'] ?? 0 );
+		update_post_meta( $post_id, 'hcqb_default_image_id', $default_image_id );
 	}
 
 	// -------------------------------------------------------------------------

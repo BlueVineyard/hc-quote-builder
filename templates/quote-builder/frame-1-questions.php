@@ -29,8 +29,9 @@ $partial_map = [
 ?>
 <div class="hcqb-builder-questions">
 
+	<?php if ( ! ( $standalone ?? false ) ) : ?>
 	<?php // ----------------------------------------------------------------
-	// Product selector
+	// Product selector — hidden in standalone mode (no pre-selected product)
 	// --------------------------------------------------------------- ?>
 	<div class="hcqb-product-selector">
 		<div class="hcqb-product-selector__current">
@@ -55,13 +56,18 @@ $partial_map = [
 			</select>
 		</div>
 	</div><!-- .hcqb-product-selector -->
+	<?php endif; ?>
 
 	<?php // ----------------------------------------------------------------
 	// Questions list
 	// --------------------------------------------------------------- ?>
 	<div class="hcqb-questions-list">
 
-		<?php foreach ( $questions as $q ) :
+		<?php
+		// Track rendered keys so duplicate slugs in the config don't share a
+		// radio group on the frontend. Duplicates get a numeric suffix appended.
+		$seen_keys = [];
+		foreach ( $questions as $q ) :
 			$q_key      = $q['key']        ?? '';
 			$q_label    = $q['label']       ?? '';
 			$input_type = $q['input_type']  ?? 'radio';
@@ -70,6 +76,17 @@ $partial_map = [
 			if ( ! $q_key || ! $q_label ) {
 				continue;
 			}
+
+			// Deduplicate: if two questions share the same key, append _2, _3, etc.
+			if ( isset( $seen_keys[ $q_key ] ) ) {
+				$suffix = 2;
+				while ( isset( $seen_keys[ $q_key . '_' . $suffix ] ) ) {
+					$suffix++;
+				}
+				$q_key    = $q_key . '_' . $suffix;
+				$q['key'] = $q_key; // partials read $q['key'] directly
+			}
+			$seen_keys[ $q_key ] = true;
 
 			$partial = $partial_map[ $input_type ] ?? 'question-radio';
 		?>

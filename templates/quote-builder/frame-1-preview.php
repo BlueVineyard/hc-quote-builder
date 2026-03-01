@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	// --------------------------------------------------------------- ?>
 	<div class="hcqb-preview-image-wrap">
 
+		<?php if ( hcqb_get_setting( 'show_view_angles' ) ) : ?>
 		<div class="hcqb-preview-view-toggle" role="group" aria-label="Product view">
 			<button type="button"
 			        class="hcqb-view-btn hcqb-view-btn--active"
@@ -53,11 +54,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 				Interior
 			</button>
 		</div>
+		<?php endif; ?>
 
 		<div class="hcqb-preview-image">
 			<?php if ( $default_image_url ) : ?>
 			<img src="<?php echo esc_url( $default_image_url ); ?>"
-			     alt="<?php echo esc_attr( $product->post_title ); ?>"
+			     alt="<?php echo esc_attr( $product_title ?? '' ); ?>"
 			     class="hcqb-preview-img"
 			     id="hcqb-preview-img">
 			<?php else : ?>

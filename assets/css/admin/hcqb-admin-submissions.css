@@ -1,0 +1,172 @@
+/* =============================================================================
+   hcqb-admin-submissions.css
+
+   Styles for the hc-quote-submissions list table and detail view.
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   Status badge — shared between list table column and detail view panel
+   ----------------------------------------------------------------------------- */
+
+.hcqb-status-badge {
+	display:        inline-block;
+	padding:        3px 8px;
+	border-radius:  3px;
+	font-size:      12px;
+	font-weight:    500;
+	line-height:    1.4;
+	white-space:    nowrap;
+	vertical-align: middle;
+}
+
+/* Colour by stable key — colour never breaks when a label is renamed */
+.hcqb-status-badge[data-status="status_1"] { background: #d4e6ff; color: #004a99; } /* New        */
+.hcqb-status-badge[data-status="status_2"] { background: #fff0d4; color: #9a5500; } /* Contacted  */
+.hcqb-status-badge[data-status="status_3"] { background: #d4f0d4; color: #1a6b1a; } /* Closed     */
+.hcqb-status-badge[data-status="status_4"] { background: #fad4d4; color: #8b0000; } /* Declined   */
+.hcqb-status-badge[data-status="status_5"] { background: #e8d4f0; color: #5a0080; } /* On Hold    */
+
+/* -----------------------------------------------------------------------------
+   List table — column widths
+   ----------------------------------------------------------------------------- */
+
+.column-hcqb_customer  { width: 15%; }
+.column-hcqb_email     { width: 18%; }
+.column-hcqb_phone     { width: 10%; }
+.column-hcqb_product   { width: 13%; }
+.column-hcqb_total     { width: 9%;  }
+.column-hcqb_distance  { width: 8%;  }
+.column-hcqb_status    { width: 9%;  }
+.column-hcqb_submitted { width: 10%; }
+
+/* Muted timestamp time line */
+.hcqb-time {
+	color:     #646970;
+	font-size: 12px;
+}
+
+/* -----------------------------------------------------------------------------
+   Submission detail — panel grid
+   ----------------------------------------------------------------------------- */
+
+.hcqb-submission-panels {
+	display:               grid;
+	grid-template-columns: 1fr 1fr;
+	gap:                   20px;
+	padding:               8px 0 4px;
+}
+
+.hcqb-sub-panel {
+	background:    #f6f7f7;
+	border:        1px solid #dcdcde;
+	border-radius: 4px;
+	padding:       16px 18px;
+}
+
+.hcqb-sub-panel__title {
+	margin:        0 0 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #dcdcde;
+	font-size:     13px;
+	font-weight:   600;
+	color:         #1d2327;
+}
+
+.hcqb-sub-panel__subtitle {
+	margin:         14px 0 8px;
+	font-size:      11px;
+	font-weight:    600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color:          #646970;
+}
+
+/* -----------------------------------------------------------------------------
+   Detail tables
+   ----------------------------------------------------------------------------- */
+
+.hcqb-sub-table {
+	width:           100%;
+	border-collapse: collapse;
+	font-size:       13px;
+}
+
+.hcqb-sub-table th,
+.hcqb-sub-table td {
+	padding:        5px 0;
+	vertical-align: top;
+	text-align:     left;
+}
+
+.hcqb-sub-table th {
+	width:         36%;
+	color:         #646970;
+	font-weight:   400;
+	padding-right: 10px;
+}
+
+/* Slightly wider label column for the options table */
+.hcqb-sub-table--options th {
+	width: 42%;
+}
+
+/* Price delta shown inline after option label */
+.hcqb-sub-price {
+	margin-left: 6px;
+	font-size:   12px;
+	color:       #646970;
+}
+
+/* Total row at the bottom of Panel 2 */
+.hcqb-sub-total {
+	display:         flex;
+	justify-content: space-between;
+	align-items:     center;
+	margin-top:      14px;
+	padding-top:     10px;
+	border-top:      2px solid #dcdcde;
+	font-size:       13px;
+}
+
+.hcqb-sub-total__price {
+	font-size:   15px;
+	font-weight: 600;
+	color:       #1d2327;
+}
+
+/* -----------------------------------------------------------------------------
+   Status control (Panel 4)
+   ----------------------------------------------------------------------------- */
+
+.hcqb-sub-status {
+	margin-top:  16px;
+	padding-top: 14px;
+	border-top:  1px solid #dcdcde;
+}
+
+.hcqb-sub-status__label {
+	display:       flex;
+	align-items:   center;
+	gap:           10px;
+	margin-bottom: 10px;
+	font-size:     13px;
+}
+
+.hcqb-sub-status__controls {
+	display:     flex;
+	align-items: center;
+	gap:         8px;
+	flex-wrap:   wrap;
+}
+
+.hcqb-sub-status__select {
+	min-width: 160px;
+}
+
+/* Inline save feedback */
+.hcqb-status-msg {
+	font-size: 12px;
+}
+
+.hcqb-status-msg--success { color: #1a6b1a; }
+.hcqb-status-msg--error   { color: #8b0000; }

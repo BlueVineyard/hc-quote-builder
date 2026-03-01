@@ -51,14 +51,15 @@ class HCQB_Plugin {
 		require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-shortcodes.php';
 
 		// Stage 9 — Submission + Email
-		// require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-ajax.php';
-		// require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-submission.php';
-		// require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-email.php';
+		// Load order: Submission → Email → Ajax (Ajax calls both).
+		require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-submission.php';
+		require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-email.php';
+		require_once HCQB_PLUGIN_DIR . 'includes/class-hcqb-ajax.php';
 
 		// Stage 10 — Submissions admin view
 		if ( is_admin() ) {
-			// require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-submission.php';
-			// require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-list-table-submissions.php';
+			require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-metabox-submission.php';
+			require_once HCQB_PLUGIN_DIR . 'admin/class-hcqb-list-table-submissions.php';
 		}
 	}
 
@@ -110,17 +111,25 @@ class HCQB_Plugin {
 		// add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class, 'enqueue_for_settings' ] );
 
 		// --- Stage 9 — AJAX Submission ---
-		// add_action( 'wp_ajax_hcqb_submit_quote',        [ HCQB_Ajax::class, 'handle_submission'   ] );
-		// add_action( 'wp_ajax_nopriv_hcqb_submit_quote', [ HCQB_Ajax::class, 'handle_submission'   ] );
+		add_action( 'wp_ajax_hcqb_submit_quote',        [ HCQB_Ajax::class, 'handle_submission' ] );
+		add_action( 'wp_ajax_nopriv_hcqb_submit_quote', [ HCQB_Ajax::class, 'handle_submission' ] );
 
 		// --- Stage 10 — Submissions Admin ---
-		// add_action( 'add_meta_boxes',        [ HCQB_Metabox_Submission::class, 'register'           ] );
-		// add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,       'enqueue_for_submissions' ] );
-		// add_action( 'wp_ajax_hcqb_update_submission_status', [ HCQB_Ajax::class, 'handle_update_status' ] );
-		// add_filter( 'manage_hc-quote-submissions_posts_columns',        [ HCQB_List_Table_Submissions::class, 'columns'        ] );
-		// add_action( 'manage_hc-quote-submissions_posts_custom_column',  [ HCQB_List_Table_Submissions::class, 'column_content' ], 10, 2 );
-		// add_action( 'restrict_manage_posts', [ HCQB_List_Table_Submissions::class, 'status_filter'  ] );
-		// add_action( 'pre_get_posts',         [ HCQB_List_Table_Submissions::class, 'apply_filter'   ] );
+		// All hooks guarded by is_admin() because the classes are only loaded in
+		// that context. pre_get_posts fires on the frontend too, so leaving it
+		// outside would cause a fatal "class not found" error on public pages.
+		// wp_ajax_ hooks are safe here — admin-ajax.php returns true for is_admin().
+		if ( is_admin() ) {
+			// Metabox registered at priority 11 so remove_meta_box() runs after
+			// WordPress adds its default boxes at priority 10.
+			add_action( 'add_meta_boxes',        [ HCQB_Metabox_Submission::class,     'register'              ], 11 );
+			add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,           'enqueue_for_submissions' ] );
+			add_action( 'wp_ajax_hcqb_update_submission_status', [ HCQB_Ajax::class,   'handle_update_status'  ] );
+			add_filter( 'manage_hc-quote-submissions_posts_columns',       [ HCQB_List_Table_Submissions::class, 'columns'        ] );
+			add_action( 'manage_hc-quote-submissions_posts_custom_column', [ HCQB_List_Table_Submissions::class, 'column_content' ], 10, 2 );
+			add_action( 'restrict_manage_posts', [ HCQB_List_Table_Submissions::class, 'status_filter'         ] );
+			add_action( 'pre_get_posts',         [ HCQB_List_Table_Submissions::class, 'apply_filter'          ] );
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -148,10 +157,13 @@ class HCQB_Plugin {
 	}
 
 	// -------------------------------------------------------------------------
-	// Stage 7 — Quote Builder assets
+	// Stage 7 / 8 — Quote Builder assets
 	// Enqueued only on pages that contain the [hc_quote_builder] shortcode.
 	// Scripts loaded in footer; HCQBConfig inline script is output in the
-	// page body (shortcode), which executes before footer scripts.
+	// page body (shortcode) and executes before footer scripts.
+	// HCQBLocale is localised to hcqb-quote-builder and is therefore available
+	// to all sub-modules that access it inside DOMContentLoaded or async
+	// callbacks (both of which fire after all footer scripts have run).
 	// -------------------------------------------------------------------------
 
 	public function enqueue_quote_builder_assets(): void {
@@ -162,8 +174,8 @@ class HCQB_Plugin {
 
 		// Primary: match the page explicitly configured in plugin settings.
 		// Fallback: scan post content for the shortcode tag.
-		$page_id          = (int) hcqb_get_setting( 'quote_builder_page_id' );
-		$on_builder_page  = ( $page_id && is_page( $page_id ) )
+		$page_id         = (int) hcqb_get_setting( 'quote_builder_page_id' );
+		$on_builder_page = ( $page_id && is_page( $page_id ) )
 			|| has_shortcode( $post->post_content, 'hc_quote_builder' );
 
 		if ( ! $on_builder_page ) {
@@ -177,7 +189,7 @@ class HCQB_Plugin {
 			HCQB_VERSION
 		);
 
-		// Sub-modules registered first so quote-builder.js can declare them as deps.
+		// --- Frame 1 sub-modules (Stage 7) ---
 		wp_enqueue_script(
 			'hcqb-pricing',
 			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-pricing.js',
@@ -206,13 +218,57 @@ class HCQB_Plugin {
 			HCQB_VERSION,
 			true
 		);
+
+		// --- Frame 2 sub-modules (Stage 8) ---
+		// hcqb-google-maps.js defines window.hcqbMapsInit — must load before
+		// the Google Maps API script (which calls hcqbMapsInit as its callback).
 		wp_enqueue_script(
-			'hcqb-quote-builder',
-			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-quote-builder.js',
-			[ 'hcqb-pricing', 'hcqb-image-switcher', 'hcqb-conditionals', 'hcqb-feature-pills' ],
+			'hcqb-google-maps',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-google-maps.js',
+			[],
 			HCQB_VERSION,
 			true
 		);
+		wp_enqueue_script(
+			'hcqb-form-submit',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-form-submit.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+
+		// --- Orchestrator (depends on all sub-modules) ---
+		wp_enqueue_script(
+			'hcqb-quote-builder',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-quote-builder.js',
+			[ 'hcqb-pricing', 'hcqb-image-switcher', 'hcqb-conditionals', 'hcqb-feature-pills', 'hcqb-google-maps', 'hcqb-form-submit' ],
+			HCQB_VERSION,
+			true
+		);
+
+		// HCQBLocale — accessed inside DOMContentLoaded listeners and async
+		// callbacks, so it's always available in time despite loading order.
+		$supported_countries = (array) ( hcqb_get_setting( 'supported_countries' ) ?: [ 'AU' ] );
+		wp_localize_script( 'hcqb-quote-builder', 'HCQBLocale', [
+			'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
+			'warehouseLat'       => hcqb_get_setting( 'warehouse_lat' ),
+			'warehouseLng'       => hcqb_get_setting( 'warehouse_lng' ),
+			'supportedCountries' => $supported_countries,
+		] );
+
+		// Google Maps API — loaded only when an API key is configured.
+		// Depends on hcqb-google-maps so WordPress outputs that script first,
+		// ensuring hcqbMapsInit is defined before the API calls it.
+		$api_key = hcqb_get_setting( 'google_maps_api_key' );
+		if ( $api_key ) {
+			wp_enqueue_script(
+				'google-maps-frontend',
+				'https://maps.googleapis.com/maps/api/js?key=' . rawurlencode( $api_key ) . '&libraries=places&callback=hcqbMapsInit',
+				[ 'hcqb-google-maps' ],
+				null,
+				true
+			);
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -235,6 +291,44 @@ class HCQB_Plugin {
 			HCQB_PLUGIN_URL . 'assets/css/frontend/hcqb-product-page.css',
 			[],
 			HCQB_VERSION
+		);
+
+		// Output CSS custom property overrides from the Styles settings tab.
+		$this->output_product_page_style_overrides();
+	}
+
+	private function output_product_page_style_overrides(): void {
+		$map = [
+			'style_pp_brand'      => '--hcqb-pp-brand',
+			'style_pp_brand_dark' => '--hcqb-pp-brand-dark',
+			'style_pp_border'     => '--hcqb-pp-border',
+			'style_pp_text'       => '--hcqb-pp-text',
+			'style_pp_muted'      => '--hcqb-pp-muted',
+			'style_pp_bg'         => '--hcqb-pp-bg',
+			'style_pp_bg_alt'     => '--hcqb-pp-bg-alt',
+			'style_pp_star_full'  => '--hcqb-pp-star-full',
+			'style_pp_star_empty' => '--hcqb-pp-star-empty',
+			'style_pp_max'        => '--hcqb-pp-max',
+			'style_pp_gap'        => '--hcqb-pp-gap',
+			'style_pp_gallery'    => '--hcqb-pp-gallery',
+			'style_pp_radius'     => '--hcqb-pp-radius',
+		];
+
+		$lines = [];
+		foreach ( $map as $setting_key => $css_var ) {
+			$value = hcqb_get_setting( $setting_key );
+			if ( '' !== (string) $value ) {
+				$lines[] = "\t" . $css_var . ': ' . $value . ';';
+			}
+		}
+
+		if ( empty( $lines ) ) {
+			return;
+		}
+
+		wp_add_inline_style(
+			'hcqb-product-page',
+			".hcqb-product-page {\n" . implode( "\n", $lines ) . "\n}"
 		);
 	}
 }

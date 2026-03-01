@@ -91,7 +91,7 @@
 
 @media ( min-width: 900px ) {
 	.hcqb-builder-layout {
-		grid-template-columns: 1fr 360px;
+		grid-template-columns: 490px 1fr;
 	}
 }
 
@@ -253,7 +253,10 @@
 	background: var( --hcqb-qb-pill-active );
 }
 
-.hcqb-radio-option input,
+.hcqb-radio-option input {
+	display: none;
+}
+
 .hcqb-checkbox-option input {
 	flex-shrink: 0;
 	accent-color: var( --hcqb-qb-accent );
@@ -276,7 +279,9 @@
 
 /* Highlight selected radio / checkbox option */
 .hcqb-radio-option:has( input:checked ),
-.hcqb-checkbox-option:has( input:checked ) {
+.hcqb-checkbox-option:has( input:checked ),
+.hcqb-radio-option.hcqb-option--selected,
+.hcqb-checkbox-option.hcqb-option--selected {
 	border-color: var( --hcqb-qb-accent );
 	background: var( --hcqb-qb-pill-active );
 }
@@ -384,9 +389,7 @@
    ============================================================================= */
 
 .hcqb-feature-pills {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
+	display: none;
 }
 
 .hcqb-pill {
@@ -491,18 +494,28 @@
 }
 
 .hcqb-btn--primary {
-	background: var( --hcqb-qb-accent );
+	background: #e02020;
 	color: #fff;
+	border-radius: 100px;
+	font-size: 16px;
+	font-weight: 700;
+	padding: 18px 32px;
+	gap: 10px;
+	letter-spacing: 0.01em;
 }
 
 .hcqb-btn--primary:hover:not( :disabled ) {
-	background: var( --hcqb-qb-accent-dark );
+	background: #c01818;
 	color: #fff;
 }
 
 .hcqb-btn--primary:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
+}
+
+.hcqb-btn-arrow {
+	flex-shrink: 0;
 }
 
 .hcqb-btn--secondary {
@@ -535,4 +548,372 @@
 
 .hcqb-btn--hidden {
 	display: none !important;
+}
+
+/* =============================================================================
+   Frame 2 — Contact form (Stage 8)
+   ============================================================================= */
+
+/* Frame 2 header ----------------------------------------------------------- */
+
+.hcqb-frame-2-header {
+	padding: 16px 0 20px;
+	border-bottom: 1px solid var( --hcqb-qb-border );
+	margin-bottom: 24px;
+}
+
+.hcqb-frame-2-step {
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var( --hcqb-qb-muted );
+	margin: 0 0 4px;
+}
+
+.hcqb-frame-2-title {
+	font-size: 20px;
+	font-weight: 700;
+	color: var( --hcqb-qb-text );
+	margin: 0 0 8px;
+}
+
+.hcqb-frame-2-subtitle {
+	font-size: 13px;
+	color: var( --hcqb-qb-muted );
+	margin: 0;
+	line-height: 1.6;
+}
+
+/* Form sections ------------------------------------------------------------ */
+
+.hcqb-form-section {
+	padding: 20px;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius );
+	background: var( --hcqb-qb-bg );
+	margin-bottom: 16px;
+}
+
+.hcqb-form-section--consent {
+	background: var( --hcqb-qb-bg-alt );
+}
+
+.hcqb-form-section__title {
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var( --hcqb-qb-muted );
+	margin: 0 0 16px;
+}
+
+/* Form rows — responsive grid ---------------------------------------------- */
+
+.hcqb-form-row {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.hcqb-form-row:last-child {
+	margin-bottom: 0;
+}
+
+@media ( min-width: 600px ) {
+	.hcqb-form-row--2col         { grid-template-columns: 1fr 1fr; }
+	.hcqb-form-row--3col         { grid-template-columns: 1fr 1fr 1fr; }
+	.hcqb-form-row--prefix       { grid-template-columns: 110px 1fr 1fr; }
+	.hcqb-form-row--phone        { grid-template-columns: 130px 1fr; }
+	.hcqb-form-row--phone-search { grid-template-columns: 1fr 1fr; }
+}
+
+/* Phone prefix + number grouped within a single form-group */
+
+.hcqb-phone-fields {
+	display: grid;
+	grid-template-columns: 130px 1fr;
+	gap: 8px;
+}
+
+/* Form groups / labels / inputs -------------------------------------------- */
+
+.hcqb-form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.hcqb-form-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var( --hcqb-qb-text );
+}
+
+.hcqb-form-input,
+.hcqb-form-select {
+	padding: 9px 12px;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 6px;
+	font-size: 14px;
+	color: var( --hcqb-qb-text );
+	background: var( --hcqb-qb-bg );
+	transition: border-color 0.15s, box-shadow 0.15s;
+	width: 100%;
+	box-sizing: border-box;
+	font-family: inherit;
+}
+
+.hcqb-form-input:focus,
+.hcqb-form-select:focus {
+	border-color: var( --hcqb-qb-accent );
+	outline: none;
+	box-shadow: 0 0 0 2px rgba( 34, 113, 177, 0.2 );
+}
+
+.hcqb-form-input[readonly] {
+	background: var( --hcqb-qb-bg-alt );
+	color: var( --hcqb-qb-muted );
+	cursor: default;
+}
+
+/* Field-wrap — icon inside input/select ------------------------------------ */
+
+.hcqb-field-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.hcqb-field-wrap .hcqb-form-input,
+.hcqb-field-wrap .hcqb-form-select {
+	padding-left: 36px;
+}
+
+.hcqb-field-icon {
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	transform: translateY( -50% );
+	display: flex;
+	align-items: center;
+	color: var( --hcqb-qb-muted );
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* Custom select — hide native arrow, show our chevron */
+
+.hcqb-field-wrap--select .hcqb-form-select {
+	appearance: none;
+	-webkit-appearance: none;
+	padding-right: 36px;
+}
+
+.hcqb-field-chevron {
+	position: absolute;
+	right: 10px;
+	top: 50%;
+	transform: translateY( -50% );
+	display: flex;
+	align-items: center;
+	color: var( --hcqb-qb-muted );
+	pointer-events: none;
+}
+
+.hcqb-form-hint {
+	font-size: 12px;
+	color: var( --hcqb-qb-muted );
+	margin: 0;
+}
+
+/* Field-level error spans -------------------------------------------------- */
+
+.hcqb-field-error {
+	font-size: 12px;
+	color: #d63638;
+	font-weight: 500;
+}
+
+/* Honeypot — CSS-hidden only; must NOT use display:none or visibility:hidden */
+.hcqb-hp {
+	position: absolute;
+	left: -9999px;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* Address fields box ------------------------------------------------------- */
+
+.hcqb-address-box {
+	background: var( --hcqb-qb-bg-alt );
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius );
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.hcqb-address-box .hcqb-form-row {
+	margin-bottom: 0;
+}
+
+/* Map container ------------------------------------------------------------ */
+
+.hcqb-map {
+	width: 100%;
+	height: 417px;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius );
+	overflow: hidden;
+	margin-top: 12px;
+}
+
+/* Quote price summary on Frame 2 ------------------------------------------ */
+
+.hcqb-contact-price {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 16px 20px;
+	background: var( --hcqb-qb-bg );
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: var( --hcqb-qb-radius );
+	margin-bottom: 16px;
+}
+
+/* Consent checkbox + expandable detail ------------------------------------ */
+
+.hcqb-consent-header {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.hcqb-consent-label {
+	flex: 1;
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	font-size: 14px;
+	color: var( --hcqb-qb-text );
+	cursor: pointer;
+	line-height: 1.5;
+}
+
+.hcqb-consent-checkbox {
+	flex-shrink: 0;
+	accent-color: var( --hcqb-qb-accent );
+	width: 16px;
+	height: 16px;
+	margin-top: 3px;
+	cursor: pointer;
+}
+
+.hcqb-consent-toggle {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	background: none;
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 4px;
+	cursor: pointer;
+	color: var( --hcqb-qb-muted );
+	transition: border-color 0.15s, color 0.15s;
+	padding: 0;
+	margin-top: 1px;
+}
+
+.hcqb-consent-toggle:hover {
+	border-color: var( --hcqb-qb-accent );
+	color: var( --hcqb-qb-accent );
+}
+
+.hcqb-consent-toggle svg {
+	transition: transform 0.2s;
+}
+
+.hcqb-consent-toggle[aria-expanded="true"] svg {
+	transform: rotate( 180deg );
+}
+
+.hcqb-consent-body {
+	margin-top: 12px;
+	padding: 12px;
+	background: var( --hcqb-qb-bg );
+	border: 1px solid var( --hcqb-qb-border );
+	border-radius: 4px;
+	font-size: 13px;
+	color: var( --hcqb-qb-muted );
+	line-height: 1.6;
+}
+
+.hcqb-consent-body p {
+	margin: 0;
+}
+
+/* Form actions — Back + Submit stack --------------------------------------- */
+
+.hcqb-form-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-top: 8px;
+}
+
+.hcqb-form-actions #hcqb-back-step {
+	align-self: flex-start;
+}
+
+/* Form-level success / error message --------------------------------------- */
+
+.hcqb-form-message {
+	padding: 12px 16px;
+	border-radius: 6px;
+	font-size: 14px;
+	line-height: 1.5;
+	margin-top: 16px;
+}
+
+.hcqb-form-message--success {
+	background: #edfaef;
+	border: 1px solid #00a32a;
+	color: #1e6929;
+}
+
+.hcqb-form-message--error {
+	background: #fde8e8;
+	border: 1px solid #d63638;
+	color: #b32d2e;
+}
+
+/* =============================================================================
+   Always-show layout — both frames visible simultaneously
+   Hide step navigation elements that only make sense in multi-step mode.
+   ============================================================================= */
+
+[data-form-layout="always_show"] .hcqb-preview-step,
+[data-form-layout="always_show"] #hcqb-next-step {
+	display: none;
+}
+
+[data-form-layout="always_show"] .hcqb-frame-2-step {
+	display: none;
+}
+
+[data-form-layout="always_show"] #hcqb-back-step {
+	display: none;
+}
+
+[data-form-layout="always_show"] .hcqb-form-actions {
+	align-items: flex-end;
 }

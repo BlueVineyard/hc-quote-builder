@@ -672,6 +672,245 @@
 	}
 
 	// =========================================================================
+	// Combination generator
+	// =========================================================================
+
+	/**
+	 * Build an array of question groups from the DOM.
+	 * Only questions that have at least one affects_image option are included.
+	 * Shape: [ { label: 'Colour', options: [ { slug, label }, … ] }, … ]
+	 */
+	function buildTagGroupsFromDom() {
+		var groups = [];
+		document.querySelectorAll( '#hcqb-questions-list > .hcqb-question-row' ).forEach( function ( qRow ) {
+			var qLabelInput = qRow.querySelector( '.hcqb-question-label-input' );
+			var qLabel      = qLabelInput ? ( qLabelInput.value || 'Unnamed Question' ) : 'Unnamed Question';
+			var options     = [];
+
+			qRow.querySelectorAll( '.hcqb-option-row' ).forEach( function ( oRow ) {
+				var check = oRow.querySelector( '.hcqb-affects-image-check' );
+				if ( ! check || ! check.checked ) return;
+
+				var slugInput  = oRow.querySelector( '.hcqb-option-slug-hidden' );
+				var labelInput = oRow.querySelector( '.hcqb-option-label-input' );
+				var slug       = slugInput  ? slugInput.value  : '';
+				var label      = labelInput ? labelInput.value : '';
+
+				if ( ! slug && label ) slug = slugify( label );
+				if ( ! slug ) return;
+
+				options.push( { slug: slug, label: label || slug } );
+			} );
+
+			if ( options.length ) {
+				groups.push( { label: qLabel, options: options } );
+			}
+		} );
+		return groups;
+	}
+
+	/**
+	 * Compute the Cartesian product of an array of arrays.
+	 * cartesian([[a,b],[x,y]]) → [[a,x],[a,y],[b,x],[b,y]]
+	 */
+	function cartesian( arrays ) {
+		return arrays.reduce( function ( acc, arr ) {
+			var result = [];
+			acc.forEach( function ( existing ) {
+				arr.forEach( function ( item ) {
+					result.push( existing.concat( [ item ] ) );
+				} );
+			} );
+			return result;
+		}, [ [] ] );
+	}
+
+	/**
+	 * Return true if a rule with exactly this set of slugs already exists in the DOM.
+	 */
+	function ruleTagsExist( slugs ) {
+		var rows = document.querySelectorAll( '#hcqb-image-rules-list > .hcqb-image-rule-row' );
+		return Array.from( rows ).some( function ( row ) {
+			var selected = Array.from( row.querySelectorAll( '.hcqb-match-tags-select option' ) )
+				.filter( function ( opt ) { return opt.selected; } )
+				.map( function ( opt ) { return opt.value; } );
+			if ( selected.length !== slugs.length ) return false;
+			return slugs.every( function ( s ) { return selected.indexOf( s ) !== -1; } );
+		} );
+	}
+
+	/**
+	 * Build a rule row with specific tags pre-selected.
+	 */
+	function buildImageRuleRowWithTags( rIdx, selectedSlugs ) {
+		var b           = 'hcqb_image_rules[' + rIdx + ']';
+		var row         = document.createElement( 'div' );
+		row.className   = 'hcqb-repeater__row hcqb-image-rule-row';
+
+		var tagOptions  = window.hcqbTagOptions || {};
+		var optionsHtml = '';
+		Object.keys( tagOptions ).forEach( function ( slug ) {
+			var sel = selectedSlugs.indexOf( slug ) !== -1 ? ' selected' : '';
+			optionsHtml += '<option value="' + escAttr( slug ) + '"' + sel + '>' + escAttr( tagOptions[ slug ] ) + '</option>';
+		} );
+
+		row.innerHTML =
+			'<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>' +
+			'<div class="hcqb-rule-tags-wrap">' +
+				'<span class="hcqb-rule-label">Match tags</span>' +
+				'<select name="' + escAttr( b ) + '[match_tags][]" multiple class="hcqb-match-tags-select" size="4">' +
+					optionsHtml +
+				'</select>' +
+				'<p class="description">Hold Ctrl / Cmd to select multiple. Leave empty for default fallback.</p>' +
+			'</div>' +
+			'<div class="hcqb-rule-image-wrap">' +
+				'<span class="hcqb-rule-label">Image</span>' +
+				'<input type="hidden" name="' + escAttr( b ) + '[attachment_id]" value="0" class="hcqb-rule-attachment-id">' +
+				'<span class="hcqb-rule-image-preview hcqb-rule-image-empty"></span>' +
+				'<button type="button" class="button hcqb-choose-rule-image">Choose</button>' +
+			'</div>' +
+			'<div class="hcqb-rule-view-wrap">' +
+				'<span class="hcqb-rule-label">View</span>' +
+				'<select name="' + escAttr( b ) + '[view]">' +
+					'<option value="front">Front</option>' +
+					'<option value="side">Side</option>' +
+					'<option value="back">Back</option>' +
+					'<option value="interior">Interior</option>' +
+				'</select>' +
+			'</div>' +
+			'<button type="button" class="button hcqb-repeater__remove">Remove</button>';
+
+		return row;
+	}
+
+	/**
+	 * Open the Generate Combinations dialog below the rules list.
+	 * Shows one checkbox per qualifying question with a live combination count.
+	 */
+	function openGenerateDialog() {
+		if ( document.getElementById( 'hcqb-generate-dialog' ) ) return;
+
+		var groups = buildTagGroupsFromDom();
+		if ( ! groups.length ) {
+			// eslint-disable-next-line no-alert
+			alert( 'No options have "Affects Image" checked. Tick the Image checkbox on at least one option per question before generating.' );
+			return;
+		}
+
+		var wrap = document.querySelector( '.hcqb-image-rules-wrap' );
+		if ( ! wrap ) return;
+
+		var checkboxesHtml = '';
+		groups.forEach( function ( group, i ) {
+			var count = group.options.length;
+			checkboxesHtml +=
+				'<label class="hcqb-gen-q-label">' +
+					'<input type="checkbox" class="hcqb-gen-q-check" data-index="' + i + '" checked> ' +
+					escAttr( group.label ) +
+					' <em>(' + count + ' option' + ( count !== 1 ? 's' : '' ) + ')</em>' +
+				'</label>';
+		} );
+
+		var dialog = document.createElement( 'div' );
+		dialog.id        = 'hcqb-generate-dialog';
+		dialog.className = 'hcqb-generate-dialog';
+		dialog.innerHTML =
+			'<h3>Generate Combinations</h3>' +
+			'<p>Select which questions to include:</p>' +
+			'<div class="hcqb-gen-questions">' + checkboxesHtml + '</div>' +
+			'<p class="hcqb-gen-count"></p>' +
+			'<div class="hcqb-gen-actions">' +
+				'<button type="button" class="button button-primary" id="hcqb-do-generate">Generate</button> ' +
+				'<button type="button" class="button" id="hcqb-cancel-generate">Cancel</button>' +
+			'</div>';
+
+		wrap.appendChild( dialog );
+
+		// Live count.
+		updateGenerateCount( dialog, groups );
+		dialog.querySelectorAll( '.hcqb-gen-q-check' ).forEach( function ( cb ) {
+			cb.addEventListener( 'change', function () {
+				updateGenerateCount( dialog, groups );
+			} );
+		} );
+
+		dialog.querySelector( '#hcqb-cancel-generate' ).addEventListener( 'click', function () {
+			dialog.remove();
+		} );
+
+		dialog.querySelector( '#hcqb-do-generate' ).addEventListener( 'click', function () {
+			var selectedIndices = [];
+			dialog.querySelectorAll( '.hcqb-gen-q-check:checked' ).forEach( function ( cb ) {
+				selectedIndices.push( parseInt( cb.dataset.index, 10 ) );
+			} );
+			if ( ! selectedIndices.length ) {
+				// eslint-disable-next-line no-alert
+				alert( 'Please select at least one question.' );
+				return;
+			}
+			doGenerate( groups, selectedIndices );
+			dialog.remove();
+		} );
+	}
+
+	/**
+	 * Recalculate and display the combination count based on checked questions.
+	 */
+	function updateGenerateCount( dialog, groups ) {
+		var selected = [];
+		dialog.querySelectorAll( '.hcqb-gen-q-check:checked' ).forEach( function ( cb ) {
+			selected.push( groups[ parseInt( cb.dataset.index, 10 ) ] );
+		} );
+
+		var count = selected.length
+			? selected.reduce( function ( acc, g ) { return acc * g.options.length; }, 1 )
+			: 0;
+
+		var countEl = dialog.querySelector( '.hcqb-gen-count' );
+		if ( countEl ) {
+			var noun = count === 1 ? 'rule' : 'rules';
+			countEl.innerHTML = selected.length < 2
+				? 'This will add <strong>' + count + '</strong> ' + noun + '. Select 2+ questions for combinations.'
+				: 'This will add up to <strong>' + count + '</strong> ' + noun + ' (duplicates will be skipped).';
+		}
+	}
+
+	/**
+	 * Build and append rule rows for every combination in the Cartesian product
+	 * of the selected question groups. Skips any that already exist.
+	 */
+	function doGenerate( groups, selectedIndices ) {
+		var list = document.getElementById( 'hcqb-image-rules-list' );
+		if ( ! list ) return;
+
+		var selectedGroups = selectedIndices.map( function ( i ) { return groups[ i ].options; } );
+		var combinations   = cartesian( selectedGroups );
+		var added   = 0;
+		var skipped = 0;
+
+		combinations.forEach( function ( combo ) {
+			var slugs = combo.map( function ( opt ) { return opt.slug; } );
+			if ( ruleTagsExist( slugs ) ) {
+				skipped++;
+				return;
+			}
+			var row = buildImageRuleRowWithTags( nextTempIdx(), slugs );
+			list.appendChild( row );
+			initImageRuleRow( row );
+			added++;
+		} );
+
+		// Brief feedback notice.
+		var msg    = added + ' rule' + ( added !== 1 ? 's' : '' ) + ' added.';
+		if ( skipped ) msg += ' ' + skipped + ' duplicate' + ( skipped !== 1 ? 's' : '' ) + ' skipped.';
+		var notice = document.createElement( 'p' );
+		notice.className   = 'hcqb-gen-notice';
+		notice.textContent = msg;
+		list.parentNode.insertBefore( notice, list.nextSibling );
+		setTimeout( function () { if ( notice.parentNode ) notice.remove(); }, 4000 );
+	}
+
+	// =========================================================================
 	// Form reindexing — called right before submit
 	//
 	// Normalises all array indices in name attributes to sequential DOM order
@@ -727,16 +966,93 @@
 		if ( addRuleBtn ) {
 			addRuleBtn.addEventListener( 'click', addImageRule );
 		}
+		var genBtn = document.getElementById( 'hcqb-generate-image-rules' );
+		if ( genBtn ) {
+			genBtn.addEventListener( 'click', openGenerateDialog );
+		}
 
 		// Populate conditional dropdowns from current question data,
 		// then restore saved values from PHP-rendered hidden inputs.
 		refreshConditionalDropdowns();
 		restoreConditionalValues();
 
+		// Default image picker — used by standalone mode configs.
+		var chooseDefaultImg = document.getElementById( 'hcqb-choose-default-image' );
+		var removeDefaultImg = document.getElementById( 'hcqb-remove-default-image' );
+
+		if ( chooseDefaultImg ) {
+			chooseDefaultImg.addEventListener( 'click', function () {
+				var frame = wp.media( {
+					title:    'Choose Default Image',
+					button:   { text: 'Use This Image' },
+					multiple:  false,
+					library:  { type: 'image' },
+				} );
+				frame.on( 'select', function () {
+					var attachment = frame.state().get( 'selection' ).first().toJSON();
+					var thumbUrl   = ( attachment.sizes && attachment.sizes.thumbnail )
+						? attachment.sizes.thumbnail.url
+						: attachment.url;
+					var hidden = document.getElementById( 'hcqb_default_image_id' );
+					var wrap   = document.getElementById( 'hcqb-default-image-wrap' );
+					if ( hidden ) { hidden.value = attachment.id; }
+					if ( wrap ) {
+						wrap.innerHTML = '<img src="' + thumbUrl + '" width="60" height="60" style="object-fit:cover;border-radius:4px;display:block;">';
+					}
+					if ( removeDefaultImg ) { removeDefaultImg.style.display = ''; }
+				} );
+				frame.open();
+			} );
+		}
+
+		if ( removeDefaultImg ) {
+			removeDefaultImg.addEventListener( 'click', function () {
+				var hidden = document.getElementById( 'hcqb_default_image_id' );
+				var wrap   = document.getElementById( 'hcqb-default-image-wrap' );
+				if ( hidden ) { hidden.value = '0'; }
+				if ( wrap ) {
+					wrap.innerHTML = '<span style="color:#999;font-size:12px;">No image selected</span>';
+				}
+				removeDefaultImg.style.display = 'none';
+			} );
+		}
+
 		// Reindex all name attributes before the post form submits.
+		// Also warn the user if any two questions share the same key.
 		var postForm = document.getElementById( 'post' );
 		if ( postForm ) {
-			postForm.addEventListener( 'submit', reindexAll );
+			postForm.addEventListener( 'submit', function ( e ) {
+				var seenKeys = {};
+				var dupes    = [];
+				document.querySelectorAll( '#hcqb-questions-list > .hcqb-question-row' ).forEach( function ( row ) {
+					var keyInp   = row.querySelector( '.hcqb-key-hidden' );
+					var labelInp = row.querySelector( '.hcqb-question-label-input' );
+					if ( ! keyInp || ! keyInp.value ) { return; }
+					var k = keyInp.value;
+					var l = labelInp ? ( labelInp.value || k ) : k;
+					if ( seenKeys[ k ] ) {
+						dupes.push( '\u201c' + l + '\u201d  (key: ' + k + ')' );
+					}
+					seenKeys[ k ] = true;
+				} );
+
+				if ( dupes.length ) {
+					var ok = window.confirm(
+						'Duplicate question keys detected!\n\n' +
+						dupes.join( '\n' ) + '\n\n' +
+						'Questions with the same key share a radio group on the frontend, ' +
+						'so selecting one option deselects the other question\u2019s selection.\n\n' +
+						'Fix: rename the duplicate questions so each generates a unique key.\n\n' +
+						'Save anyway?'
+					);
+					if ( ! ok ) {
+						e.preventDefault();
+						return;
+					}
+				}
+
+				reindexAll();
+			} );
 		}
 	} );
 

@@ -234,3 +234,74 @@
 .hcqb-rule-view-wrap select {
 	width: auto;
 }
+
+/* =============================================================================
+   Combination generator dialog
+   ============================================================================= */
+
+.hcqb-image-rules-wrap {
+	position: relative;
+}
+
+#hcqb-generate-image-rules {
+	margin-left: 6px;
+}
+
+.hcqb-generate-dialog {
+	margin-top: 16px;
+	padding: 16px 20px;
+	background: #fff;
+	border: 1px solid var(--hcqb-border);
+	border-radius: var(--hcqb-radius);
+	box-shadow: 0 2px 8px rgba(0,0,0,.08);
+	max-width: 520px;
+}
+
+.hcqb-generate-dialog h3 {
+	margin: 0 0 8px;
+	font-size: 14px;
+}
+
+.hcqb-generate-dialog p {
+	margin: 0 0 10px;
+	color: var(--hcqb-muted);
+	font-size: 13px;
+}
+
+.hcqb-gen-questions {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.hcqb-gen-q-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.hcqb-gen-q-label em {
+	color: var(--hcqb-muted);
+	font-style: normal;
+}
+
+.hcqb-gen-count {
+	font-size: 13px;
+	margin-bottom: 14px !important;
+	color: var(--hcqb-text) !important;
+}
+
+.hcqb-gen-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.hcqb-gen-notice {
+	margin-top: 8px;
+	font-size: 13px;
+	color: #1a7a3a;
+	font-weight: 500;
+}

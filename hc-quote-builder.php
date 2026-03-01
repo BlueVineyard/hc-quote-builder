@@ -2,7 +2,7 @@
 /**
  * Plugin Name:  HC Quote Builder
  * Description:  Custom quote builder for HC Containers — portable building product configuration, live pricing, and quote submission.
- * Version:      1.6.0
+ * Version:      1.9.0
  * Author:       Blue Vineyard
  * License:      GPL-2.0-or-later
  * Text Domain:  hc-quote-builder
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Constants
 // -------------------------------------------------------------------------
 
-define( 'HCQB_VERSION',    '1.6.0' );
+define( 'HCQB_VERSION',    '1.9.0' );
 define( 'HCQB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'HCQB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

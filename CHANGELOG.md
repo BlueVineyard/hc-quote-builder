@@ -149,30 +149,54 @@ Versioning: `HCQB_VERSION` minor-bumped on each stage completion — Stage 1 →
 
 ---
 
-### [Stage 8] — Pending
-**Frame 2 Contact Form + Google APIs**
-- [ ] `templates/quote-builder/frame-2-contact.php`
-- [ ] `assets/js/frontend/hcqb-google-maps.js`
-- [ ] `assets/js/frontend/hcqb-form-submit.js`
+### [Stage 8] — 2026-02-23
+**Quote Builder — Frame 2 Contact Form + Google APIs** | `HCQB_VERSION` → `1.7.0`
+
+**Added**
+- [x] `templates/quote-builder/frame-2-contact.php` — Frame 2 wrapper (`#hcqb-frame-2`, `hidden` by default); contact form with hidden action/product/nonce/selections fields; honeypot (`div.hcqb-hp` — CSS-positioned off-screen, never `display:none`); Personal Details section (title prefix select from `prefix_options`, first name, last name, email, confirm email, phone prefix from `supported_countries`, phone number); Delivery Address section (Google Places search input, readonly street/suburb/state/postcode, hidden lat/lng, readonly shipping distance, `div#hcqb-map`); quote price summary (`.hcqb-live-price` — updated by existing Pricing module); consent checkbox + collapsible privacy fine print (`<details>`); form message div; Back + Submit action row
+- [x] `assets/js/frontend/hcqb-google-maps.js` — Registers `window.hcqbMapsInit` as the Google Maps API async callback; on ready: attaches Places Autocomplete to `#hcqb-address-search` restricted to `HCQBLocale.supportedCountries`; on `place_changed` parses address components → fills street/suburb/state/postcode/lat/lng, auto-selects matching phone prefix by detected country; calls Distance Matrix (DRIVING, METRIC) and populates `#hcqb-distance`; initialises Google Map centred on warehouse (`HCQBLocale.warehouseLat`/`Lng`) with blue warehouse marker and customer destination marker; listens to `hcqb:frame-2-shown` to trigger `google.maps.event.trigger(map, 'resize')`
+- [x] `assets/js/frontend/hcqb-form-submit.js` — Attaches `submit` listener to `#hcqb-quote-form`; validates first name (required), last name (required), email (required + format), confirm email (required + match), consent (required); shows/clears `.hcqb-field-error` spans; live error-clearing on `input`/`change`; on valid submit: `fetch()` POST to `HCQBLocale.ajaxUrl` with `FormData` + `total_price` from `HCQBState.currentPrice`; on success: shows success message + resets form; on failure: shows error message + restores submit button to `data-original-label`
+
+**Changed**
+- [x] `templates/quote-builder/frame-2-contact.php` — (see Added above)
+- [x] `assets/js/frontend/hcqb-quote-builder.js` — `initFrameNav()` added: enables Continue button (`#hcqb-next-step`) after first non-initial `hcqb:selection-changed`; on Continue: `collectSelections()` serializes visible Frame 1 inputs to JSON → sets into `#hcqb-selections`; toggles `frame1.hidden`/`frame2.hidden`; dispatches `hcqb:frame-2-shown`; scrolls builder into view; Back button restores Frame 1; `collectSelections()` harvests radio/checkbox/select values from visible questions (strips price spans from labels, preserves slug + price metadata); `initFrameNav()` called in DOMContentLoaded
+- [x] `assets/css/frontend/hcqb-quote-builder.css` — Frame 2 styles appended: frame header (step label + title); form sections (`.hcqb-form-section`); responsive form rows (`.hcqb-form-row` 1-col default → `--2col`, `--3col`, `--prefix`, `--phone` at ≥600px); form groups/labels/inputs/selects with focus ring; `[readonly]` muted style; field hints; `.hcqb-field-error` (red, 12px); `.hcqb-hp` honeypot (position:absolute, left:-9999px, 1×1, opacity:0); `.hcqb-map` 240px height; contact price summary; consent label + checkbox (`accent-color`); `<details>` fine print; form actions row; success/error message blocks
+- [x] `includes/class-hcqb-shortcodes.php` — `render_builder_frame_1()`: added `id="hcqb-frame-1"` to `.hcqb-builder-layout`; gathers Frame 2 PHP variables (`$prefix_options`, `$supported_countries`, `$submit_button_label`, `$consent_text`, `$privacy_fine_print`) from plugin settings; includes `frame-2-contact.php` inside `.hcqb-quote-builder` after the layout div
+- [x] `includes/class-hcqb-plugin.php` — `enqueue_quote_builder_assets()`: enqueues `hcqb-google-maps.js` and `hcqb-form-submit.js`; adds both to `hcqb-quote-builder` dependency list; calls `wp_localize_script('hcqb-quote-builder', 'HCQBLocale', [...])` with `ajaxUrl`, `warehouseLat`, `warehouseLng`, `supportedCountries`; conditionally enqueues Google Maps API script (`?key=KEY&libraries=places&callback=hcqbMapsInit`) dependent on `hcqb-google-maps` when API key is configured
+- [x] `hc-quote-builder.php` — `HCQB_VERSION` bumped `1.6.0` → `1.7.0`
 
 ---
 
-### [Stage 9] — Pending
-**Submission Processing + Emails**
-- [ ] `includes/class-hcqb-ajax.php`
-- [ ] `includes/class-hcqb-submission.php`
-- [ ] `includes/class-hcqb-email.php`
-- [ ] `templates/emails/admin-notification.php`
-- [ ] `templates/emails/customer-copy.php`
+### [Stage 9] — 2026-02-23
+**Submission Processing + Emails** | `HCQB_VERSION` → `1.8.0`
+
+**Added**
+- [x] `includes/class-hcqb-ajax.php` — `HCQB_Ajax` with single static method `handle_submission()`; strict 10-step pipeline: (1) nonce verification via `check_ajax_referer()` — returns 403 JSON error on failure; (2) honeypot check on `hcqb_hp` — silently returns success to fool bots; (3) `absint()` product ID + `get_post_type()` guard; (4) active config check via `hcqb_get_active_config_for_product()`; (5) required field validation via `HCQB_Submission::validate()`; (6) input sanitisation via `HCQB_Submission::sanitise_data()`; (7) `wp_insert_post()` with post title `"{Prefix} {First} {Last} — {Product Name}"`; (8) meta persistence via `HCQB_Submission::save_meta()`; (9) email dispatch via `HCQB_Email` — failures logged to `hcqb_last_email_error` option, never block save; (10) `wp_send_json_success()` with confirmation message; registered for both `wp_ajax_` and `wp_ajax_nopriv_` hooks
+- [x] `includes/class-hcqb-submission.php` — `HCQB_Submission` static class; `validate()`: checks first name, last name, email (required + `is_email()` format check), consent field — returns keyed `$errors` array; `sanitise_data()`: combines phone prefix + number, parses `hcqb_selections` JSON via `json_decode(wp_unslash(...))`, builds question-label lookup from active config meta, normalises to label snapshots (question_label + option_label + price + price_type), extracts `shipping_distance_km` via `preg_replace('/[^\d.]/', '', ...)`, returns fully sanitised `$data` array; `save_meta()`: persists all §15.3 meta keys — `hcqb_linked_product_id`, `hcqb_product_name`, `hcqb_base_price`, `hcqb_selected_options` (label snapshots), `hcqb_total_price`, contact fields, address fields, `hcqb_shipping_distance_km`, `hcqb_submission_status` (first stable key from settings, default `status_1`), `hcqb_submitted_at` (ISO 8601 UTC via `gmdate('Y-m-d\TH:i:s\Z')`); `format_address()`: `implode(', ', array_filter([street, suburb, state, postcode]))`
+- [x] `includes/class-hcqb-email.php` — `HCQB_Email` static class; `send_admin_notification()` and `send_customer_copy()`: both use `Content-Type: text/plain; charset=UTF-8`; subject token replacement via `str_replace(['{product_name}','{customer_name}'], [...], $subject)`; from name/email from plugin settings Tab 2 falling back to WordPress options; body built via `ob_start()/include/ob_get_clean()` — variables injected into scope before include; returns `wp_mail()` boolean
+- [x] `templates/emails/admin-notification.php` — Plain-text admin email body; sections: customer details (name, email, phone), quote summary (product name, selected options with +/− price deltas via `hcqb_format_price()`), total estimate, shipping details (address, distance), WordPress admin link via `get_edit_post_link()`; submission timestamp formatted as `current_time('F j, Y \a\t g:i a')`; 52-char separator lines
+- [x] `templates/emails/customer-copy.php` — Plain-text customer email body; salutation from `$data['prefix']` + last name; quote summary (product, selected options with price deltas, base price, total); shipping section (address, estimated distance, confirmation-pending note); obligation-free disclaimer block; company name from `hcqb_get_setting('from_name')` ?: `get_option('blogname')`; `home_url('/')` footer
+
+**Changed**
+- [x] `includes/class-hcqb-plugin.php` — Stage 9 `require_once` statements uncommented in `load_dependencies()` (order: submission → email → ajax); `wp_ajax_hcqb_submit_quote` and `wp_ajax_nopriv_hcqb_submit_quote` actions activated pointing to `HCQB_Ajax::handle_submission`
+- [x] `hc-quote-builder.php` — `HCQB_VERSION` bumped `1.7.0` → `1.8.0`
 
 ---
 
-### [Stage 10] — Pending
-**Submissions Admin View**
-- [ ] `admin/class-hcqb-list-table-submissions.php`
-- [ ] `admin/class-hcqb-metabox-submission.php`
-- [ ] `assets/js/admin/hcqb-admin-submissions.js`
-- [ ] `assets/css/admin/hcqb-admin-submissions.css`
+### [Stage 10] — 2026-02-23
+**Submissions Admin View** | `HCQB_VERSION` → `1.9.0`
+
+**Added**
+- [x] `admin/class-hcqb-list-table-submissions.php` — `HCQB_List_Table_Submissions` static class; `columns()`: replaces default WP columns with custom set (cb, Customer, Email, Phone, Product, Total Estimate, Shipping Dist., Status, Submitted); `column_content()`: Customer column links to detail view, Email renders mailto link, Product links to product edit screen, Total via `hcqb_format_price()`, Distance formatted with km, Status renders `<span class="hcqb-status-badge" data-status="{key}">` with label resolved from settings, Submitted renders date + UTC time; `status_filter()`: renders `<select name="hcqb_status">` in `restrict_manage_posts` — only shown on `hc-quote-submissions` screen; `apply_filter()`: default sort newest first (`date DESC`) when no explicit orderby, applies meta_query for `hcqb_submission_status` when `$_GET['hcqb_status']` is set
+- [x] `admin/class-hcqb-metabox-submission.php` — `HCQB_Metabox_Submission` static class; `register()` (called at priority 11): removes `submitdiv`, `slugdiv`, `authordiv`, `revisionsdiv` meta boxes; adds single `hcqb-submission-detail` meta box at `normal`/`high`; `render()`: four panels — (1) Customer Details (name, email as mailto link, phone), (2) Quote Summary (product name linked to edit screen, base price, selected options table with +/− price deltas, total estimate), (3) Shipping (full address, estimated distance), (4) Submission Info (formatted UTC timestamp, post ID, status badge + dropdown + "Save Status" button + inline message span + `wp_nonce_field`)
+- [x] `assets/js/admin/hcqb-admin-submissions.js` — IIFE; `DOMContentLoaded` listener; attaches click handler to `#hcqb-save-status`; reads post ID from `data-post-id`, status key from `#hcqb-status-select`, nonce from `#hcqb_status_nonce`; `fetch()` POST to `HCQBSubmissions.ajaxUrl` with `action=hcqb_update_submission_status`; on success: updates `#hcqb-status-badge` text + `data-status` attribute (triggers CSS colour change); `showMsg()` helper shows success/error inline for 4 seconds then auto-hides
+- [x] `assets/css/admin/hcqb-admin-submissions.css` — `.hcqb-status-badge` base styles (inline-block, border-radius 3px, 12px font); colour rules by stable key — `status_1` blue, `status_2` amber, `status_3` green, `status_4` red, `status_5` purple — colour never breaks on label rename; column width hints for all 8 custom columns; `.hcqb-time` muted secondary text; two-column `hcqb-submission-panels` grid; `.hcqb-sub-panel` bordered card; panel title with border-bottom divider; `.hcqb-sub-panel__subtitle` for options section; `.hcqb-sub-table` with 36% label column; `.hcqb-sub-price` muted inline delta; `.hcqb-sub-total` flex row with bold price; `.hcqb-sub-status` section with label + controls row; `.hcqb-status-msg--success/error` inline feedback colours
+
+**Changed**
+- [x] `admin/class-hcqb-admin-assets.php` — `enqueue_for_submissions()` implemented: guards on `edit.php`/`post.php` + `hc-quote-submissions` screen; enqueues `hcqb-admin-global.css` and `hcqb-admin-submissions.css` on both list and detail; enqueues `hcqb-admin-submissions.js` and `wp_localize_script('hcqb-admin-submissions', 'HCQBSubmissions', {ajaxUrl, nonce})` on detail view only
+- [x] `includes/class-hcqb-ajax.php` — `handle_update_status()` added: `check_ajax_referer('hcqb_update_status', 'nonce')`; `absint` post ID + `get_post_type()` guard; `sanitize_key` status key; validates key exists in `hcqb_settings.submission_status_labels` via `array_column()`; `update_post_meta()` + `wp_send_json_success()`
+- [x] `includes/class-hcqb-plugin.php` — Stage 10 `require_once` statements uncommented; all Stage 10 hooks activated: `add_meta_boxes` at priority 11 (ensures `remove_meta_box()` runs after WP adds defaults at priority 10), `admin_enqueue_scripts`, `wp_ajax_hcqb_update_submission_status`, `manage_hc-quote-submissions_posts_columns`, `manage_hc-quote-submissions_posts_custom_column`, `restrict_manage_posts`, `pre_get_posts`
+- [x] `hc-quote-builder.php` — `HCQB_VERSION` bumped `1.8.0` → `1.9.0`
 
 ---
 

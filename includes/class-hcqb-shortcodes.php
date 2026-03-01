@@ -281,7 +281,7 @@ class HCQB_Shortcodes {
 		?>
 		<div class="hcqb-additional-notes">
 			<h3>Additional Notes</h3>
-			<p><?php echo nl2br( esc_html( $notes ) ); ?></p>
+			<div class="hcqb-additional-notes__body"><?php echo wp_kses_post( $notes ); ?></div>
 		</div>
 		<?php
 		return ob_get_clean();
@@ -716,21 +716,29 @@ class HCQB_Shortcodes {
 	public static function sc_quote_builder( array|string $atts ): string {
 		$product_id = absint( $_GET['product'] ?? 0 );
 
-		if ( ! $product_id ) {
-			return self::render_builder_error( 'no_product' );
+		// Product-specific mode — existing flow.
+		if ( $product_id ) {
+			$product = get_post( $product_id );
+			if ( ! $product || 'hc-containers' !== $product->post_type || 'publish' !== $product->post_status ) {
+				return self::render_builder_error( 'not_found' );
+			}
+			$config = hcqb_get_active_config_for_product( $product_id );
+			if ( ! $config ) {
+				return self::render_builder_error( 'no_config', $product );
+			}
+			return self::render_builder_frame_1( $product, $config );
 		}
 
-		$product = get_post( $product_id );
-		if ( ! $product || 'hc-containers' !== $product->post_type || 'publish' !== $product->post_status ) {
-			return self::render_builder_error( 'not_found' );
+		// Standalone mode — render using the global default config, no product required.
+		$config_id = absint( hcqb_get_setting( 'default_config_id' ) );
+		if ( $config_id ) {
+			$config = get_post( $config_id );
+			if ( $config && 'hc-quote-configs' === $config->post_type && 'publish' === $config->post_status ) {
+				return self::render_builder_standalone( $config );
+			}
 		}
 
-		$config = hcqb_get_active_config_for_product( $product_id );
-		if ( ! $config ) {
-			return self::render_builder_error( 'no_config', $product );
-		}
-
-		return self::render_builder_frame_1( $product, $config );
+		return self::render_builder_error( 'no_product' );
 	}
 
 	// -------------------------------------------------------------------------
@@ -781,6 +789,14 @@ class HCQB_Shortcodes {
 
 		$base_price = (float) get_post_meta( $product_id, 'hcqb_product_price', true );
 
+		// Frame 2 — variables passed into frame-2-contact.php.
+		$prefix_options      = (array) ( hcqb_get_setting( 'prefix_options' )      ?: [ 'Mr', 'Mrs', 'Ms', 'Dr' ] );
+		$supported_countries = (array) ( hcqb_get_setting( 'supported_countries' ) ?: [ 'AU' ] );
+		$submit_button_label = hcqb_get_setting( 'submit_button_label' ) ?: 'Submit Quote Request';
+		$consent_text        = hcqb_get_setting( 'consent_text' )        ?: 'I agree to be contacted regarding this quote request.';
+		$privacy_fine_print  = hcqb_get_setting( 'privacy_fine_print' )  ?: '';
+		$form_layout         = hcqb_get_setting( 'quote_form_layout' )   ?: 'multistep';
+
 		// JSON config block for JS modules.
 		$config_data = [
 			'productId'         => $product_id,
@@ -791,18 +807,101 @@ class HCQB_Shortcodes {
 			'defaultImageUrl'   => $default_image_url,
 			'availableProducts' => $available_products,
 			'pillQuestions'     => array_map( fn( $q ) => $q['key'], $pill_questions ),
+			'formLayout'        => $form_layout,
+		];
+
+		$standalone    = false;
+		$product_title = $product->post_title;
+
+		ob_start();
+		echo '<script>window.HCQBConfig = ' . wp_json_encode( $config_data ) . ';</script>' . "\n";
+		?>
+		<div class="hcqb-quote-builder" id="hcqb-builder"
+		     data-product-id="<?php echo esc_attr( $product_id ); ?>"
+		     data-form-layout="<?php echo esc_attr( $form_layout ); ?>">
+			<div class="hcqb-builder-layout" id="hcqb-frame-1">
+				<?php
+				include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-1-questions.php';
+				include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-1-preview.php';
+				?>
+			</div><!-- .hcqb-builder-layout #hcqb-frame-1 -->
+			<?php include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-2-contact.php'; ?>
+		</div><!-- .hcqb-quote-builder -->
+		<?php
+		return ob_get_clean();
+	}
+
+	// -------------------------------------------------------------------------
+	// Builder — standalone renderer (no product required)
+	// -------------------------------------------------------------------------
+
+	private static function render_builder_standalone( WP_Post $config ): string {
+		$product       = null;
+		$product_id    = 0;
+		$product_title = '';
+		$standalone    = true;
+
+		$questions   = get_post_meta( $config->ID, 'hcqb_questions',   true ) ?: [];
+		$image_rules = get_post_meta( $config->ID, 'hcqb_image_rules', true ) ?: [];
+		$base_price  = (float) get_post_meta( $config->ID, 'hcqb_base_price', true );
+
+		// Default image from the config's own meta.
+		$default_image_id  = absint( get_post_meta( $config->ID, 'hcqb_default_image_id', true ) );
+		$default_image_url = $default_image_id
+			? ( wp_get_attachment_image_url( $default_image_id, 'large' ) ?: '' )
+			: '';
+
+		// Process image rules — attach URLs, sort most-specific-first.
+		foreach ( $image_rules as &$rule ) {
+			$rule['image_url'] = wp_get_attachment_url( $rule['attachment_id'] ?? 0 ) ?: '';
+		}
+		unset( $rule );
+		usort( $image_rules, fn( $a, $b ) => count( $b['match_tags'] ) <=> count( $a['match_tags'] ) );
+
+		// No available products in standalone mode — the product selector is hidden.
+		$available_products = [];
+
+		// Feature pill questions.
+		$pill_questions = array_slice(
+			array_values( array_filter( $questions, fn( $q ) => ! empty( $q['show_in_pill'] ) ) ),
+			0, 4
+		);
+
+		// Frame 2 variables — same as render_builder_frame_1.
+		$prefix_options      = (array) ( hcqb_get_setting( 'prefix_options' )      ?: [ 'Mr', 'Mrs', 'Ms', 'Dr' ] );
+		$supported_countries = (array) ( hcqb_get_setting( 'supported_countries' ) ?: [ 'AU' ] );
+		$submit_button_label = hcqb_get_setting( 'submit_button_label' ) ?: 'Submit Quote Request';
+		$consent_text        = hcqb_get_setting( 'consent_text' )        ?: 'I agree to be contacted regarding this quote request.';
+		$privacy_fine_print  = hcqb_get_setting( 'privacy_fine_print' )  ?: '';
+		$form_layout         = hcqb_get_setting( 'quote_form_layout' )   ?: 'multistep';
+
+		// JSON config block for JS modules.
+		$config_data = [
+			'productId'         => 0,
+			'productName'       => '',
+			'basePrice'         => $base_price,
+			'questions'         => $questions,
+			'imageRules'        => $image_rules,
+			'defaultImageUrl'   => $default_image_url,
+			'availableProducts' => [],
+			'pillQuestions'     => array_map( fn( $q ) => $q['key'], $pill_questions ),
+			'formLayout'        => $form_layout,
+			'standalone'        => true,
 		];
 
 		ob_start();
 		echo '<script>window.HCQBConfig = ' . wp_json_encode( $config_data ) . ';</script>' . "\n";
 		?>
-		<div class="hcqb-quote-builder" id="hcqb-builder" data-product-id="<?php echo esc_attr( $product_id ); ?>">
-			<div class="hcqb-builder-layout">
+		<div class="hcqb-quote-builder" id="hcqb-builder"
+		     data-product-id="0"
+		     data-form-layout="<?php echo esc_attr( $form_layout ); ?>">
+			<div class="hcqb-builder-layout" id="hcqb-frame-1">
 				<?php
 				include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-1-questions.php';
 				include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-1-preview.php';
 				?>
-			</div><!-- .hcqb-builder-layout -->
+			</div><!-- .hcqb-builder-layout #hcqb-frame-1 -->
+			<?php include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-2-contact.php'; ?>
 		</div><!-- .hcqb-quote-builder -->
 		<?php
 		return ob_get_clean();

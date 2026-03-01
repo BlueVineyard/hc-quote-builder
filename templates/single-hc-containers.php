@@ -49,17 +49,16 @@ $shipping_link =          get_post_meta( $post_id, 'hcqb_shipping_details_link',
 // Gather meta — lease fields
 // =========================================================================
 
-$lease_price       = (float) get_post_meta( $post_id, 'hcqb_lease_price',              true );
-$lease_price_label =         get_post_meta( $post_id, 'hcqb_lease_price_label',        true ) ?: 'per week';
-$lease_terms       =         get_post_meta( $post_id, 'hcqb_lease_terms',              true );
-$lease_layout_title =        get_post_meta( $post_id, 'hcqb_lease_layout_title',       true );
-$lease_layout_desc =         get_post_meta( $post_id, 'hcqb_lease_layout_description', true );
-$lease_extras      =         get_post_meta( $post_id, 'hcqb_lease_extras',             true );
-$enquiry_btn_label =         get_post_meta( $post_id, 'hcqb_enquiry_button_label',     true ) ?: 'Enquire Now';
+$lease_price        = (float) get_post_meta( $post_id, 'hcqb_lease_price',              true );
+$lease_price_label  =         get_post_meta( $post_id, 'hcqb_lease_price_label',        true ) ?: 'per week';
+$lease_terms        =         get_post_meta( $post_id, 'hcqb_lease_terms',              true );
+$lease_layout_title =         get_post_meta( $post_id, 'hcqb_lease_layout_title',       true );
+$lease_layout_desc  =         get_post_meta( $post_id, 'hcqb_lease_layout_description', true );
+$lease_extras       =         get_post_meta( $post_id, 'hcqb_lease_extras',             true );
+$enquiry_btn_label  =         get_post_meta( $post_id, 'hcqb_enquiry_button_label',     true ) ?: 'Enquire Now';
 
 // =========================================================================
 // Assembled price calculation
-// Finds the first option with option_role === 'assembly' in the linked config.
 // =========================================================================
 
 $config          = hcqb_get_active_config_for_product( $post_id );
@@ -129,58 +128,83 @@ get_header();
 	<div class="hcqb-product-layout">
 
 		<?php // ------------------------------------------------------------
-		// Gallery column
+		// Gallery column — vertical thumbnail strip + main image
 		// --------------------------------------------------------- ?>
-		<?php if ( $gallery_ids ) : ?>
+		<?php if ( $gallery_ids ) :
+			$main_id    = $gallery_ids[0];
+			$main_url   = wp_get_attachment_image_url( $main_id, 'large' );
+			$main_alt   = trim( (string) get_post_meta( $main_id, '_wp_attachment_image_alt', true ) );
+			$has_thumbs = count( $gallery_ids ) > 1;
+		?>
 		<div class="hcqb-product-gallery">
 
+			<div class="hcqb-gallery-layout<?php echo $has_thumbs ? ' hcqb-gallery-layout--with-thumbs' : ''; ?>">
+
+				<?php if ( $has_thumbs ) : ?>
+				<div class="hcqb-gallery-thumbs" role="list">
+					<?php foreach ( $gallery_ids as $img_id ) :
+						$thumb_url = wp_get_attachment_image_url( $img_id, 'thumbnail' );
+						$full_url  = wp_get_attachment_image_url( $img_id, 'large' );
+						$alt       = trim( (string) get_post_meta( $img_id, '_wp_attachment_image_alt', true ) );
+					?>
+					<button type="button"
+					        class="hcqb-gallery-thumb<?php echo $img_id === $main_id ? ' hcqb-gallery-thumb--active' : ''; ?>"
+					        data-full="<?php echo esc_url( $full_url ); ?>"
+					        aria-label="View image"
+					        role="listitem">
+						<img src="<?php echo esc_url( $thumb_url ); ?>"
+						     alt="<?php echo esc_attr( $alt ?: get_the_title() ); ?>">
+					</button>
+					<?php endforeach; ?>
+				</div>
+				<?php endif; ?>
+
+				<div class="hcqb-gallery-main">
+					<img src="<?php echo esc_url( $main_url ); ?>"
+					     alt="<?php echo esc_attr( $main_alt ?: get_the_title() ); ?>"
+					     class="hcqb-gallery-main__img"
+					     id="hcqb-main-img">
+				</div>
+
+			</div><!-- .hcqb-gallery-layout -->
+
+			<?php // Categories taxonomy links ?>
 			<?php
-			$main_id  = $gallery_ids[0];
-			$main_url = wp_get_attachment_image_url( $main_id, 'large' );
-			$main_alt = trim( (string) get_post_meta( $main_id, '_wp_attachment_image_alt', true ) );
+			$terms = get_the_terms( $post_id, 'hc-container-category' );
+			if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) :
+				$term_links = [];
+				foreach ( $terms as $term ) {
+					$term_url     = get_term_link( $term );
+					$term_links[] = '<a href="' . esc_url( $term_url ) . '" class="hcqb-product-cat-link">'
+					                . esc_html( $term->name )
+					                . '</a>';
+				}
 			?>
-
-			<div class="hcqb-gallery-main">
-				<img src="<?php echo esc_url( $main_url ); ?>"
-				     alt="<?php echo esc_attr( $main_alt ?: get_the_title() ); ?>"
-				     class="hcqb-gallery-main__img"
-				     id="hcqb-main-img">
-			</div>
-
-			<?php if ( count( $gallery_ids ) > 1 ) : ?>
-			<div class="hcqb-gallery-thumbs" role="list">
-				<?php foreach ( $gallery_ids as $img_id ) :
-					$thumb_url = wp_get_attachment_image_url( $img_id, 'thumbnail' );
-					$full_url  = wp_get_attachment_image_url( $img_id, 'large' );
-					$alt       = trim( (string) get_post_meta( $img_id, '_wp_attachment_image_alt', true ) );
-				?>
-				<button type="button"
-				        class="hcqb-gallery-thumb<?php echo $img_id === $main_id ? ' hcqb-gallery-thumb--active' : ''; ?>"
-				        data-full="<?php echo esc_url( $full_url ); ?>"
-				        aria-label="View image"
-				        role="listitem">
-					<img src="<?php echo esc_url( $thumb_url ); ?>"
-					     alt="<?php echo esc_attr( $alt ?: get_the_title() ); ?>">
-				</button>
-				<?php endforeach; ?>
-			</div>
+			<p class="hcqb-product-cats">
+				<strong>Categories:</strong>
+				<?php echo implode( ', ', $term_links ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+			</p>
 			<?php endif; ?>
+
+			<?php // Review prompt + dummy button ?>
+			<p class="hcqb-review-prompt">Purchased this unit? Please leave us a review.</p>
+			<button type="button" class="hcqb-btn hcqb-btn--review">
+				<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+					<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+					<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+				</svg>
+				Write a Review
+			</button>
 
 		</div><!-- .hcqb-product-gallery -->
 		<?php endif; ?>
 
 		<?php // ------------------------------------------------------------
-		// Details column — shared header (title + rating + short desc)
+		// Details column
 		// --------------------------------------------------------- ?>
 		<div class="hcqb-product-details">
 
-			<h1 class="hcqb-product-title"><?php
-				echo esc_html( get_the_title() );
-				if ( 'lease' === $view ) {
-					echo ' <span class="hcqb-title-tag">— Lease</span>';
-				}
-			?></h1>
-
+			<?php // Rating — above the title ?>
 			<?php if ( $star_rating > 0 ) : ?>
 			<div class="hcqb-rating"
 			     aria-label="<?php echo esc_attr( $star_rating . ' out of 5 stars' ); ?>">
@@ -188,10 +212,19 @@ get_header();
 					<?php echo hcqb_render_stars( $star_rating ); ?>
 				</span>
 				<?php if ( $review_count > 0 ) : ?>
-				<span class="hcqb-review-count">(<?php echo absint( $review_count ); ?> review<?php echo $review_count !== 1 ? 's' : ''; ?>)</span>
+				<span class="hcqb-review-count">
+					<?php echo absint( $review_count ); ?> Review<?php echo $review_count !== 1 ? 's' : ''; ?>
+				</span>
 				<?php endif; ?>
 			</div>
 			<?php endif; ?>
+
+			<h1 class="hcqb-product-title"><?php
+				echo esc_html( get_the_title() );
+				if ( 'lease' === $view ) {
+					echo ' <span class="hcqb-title-tag">— Lease</span>';
+				}
+			?></h1>
 
 			<?php if ( $short_desc ) : ?>
 			<p class="hcqb-short-desc"><?php echo esc_html( $short_desc ); ?></p>
@@ -202,51 +235,96 @@ get_header();
 			// ============================================================ ?>
 			<?php if ( 'product' === $view ) : ?>
 
+			<?php // Large base price — shown above the description card ?>
 			<?php if ( $base_price > 0 ) : ?>
-			<div class="hcqb-pricing">
-				<?php if ( null !== $assembled_price ) : ?>
-					<div class="hcqb-price-row">
-						<span class="hcqb-price-label">Flatpack / DIY</span>
-						<span class="hcqb-price-value"><?php echo esc_html( hcqb_format_price( $base_price ) ); ?></span>
-					</div>
-					<div class="hcqb-price-row hcqb-price-row--assembled">
-						<span class="hcqb-price-label">Fully Assembled</span>
-						<span class="hcqb-price-value"><?php echo esc_html( hcqb_format_price( $assembled_price ) ); ?></span>
-					</div>
-				<?php else : ?>
-					<div class="hcqb-price-row">
-						<span class="hcqb-price-label">From</span>
-						<span class="hcqb-price-value"><?php echo esc_html( hcqb_format_price( $base_price ) ); ?></span>
-					</div>
-				<?php endif; ?>
-			</div>
+			<div class="hcqb-base-price"><?php echo esc_html( hcqb_format_price( $base_price ) ); ?></div>
 			<?php endif; ?>
 
+			<?php // Product Description card — collapsible ?>
+			<details class="hcqb-desc-card" open>
+				<summary class="hcqb-desc-card__header">
+					<span class="hcqb-desc-card__title">Product Description</span>
+					<span class="hcqb-desc-card__toggle" aria-hidden="true"></span>
+				</summary>
+
+				<div class="hcqb-desc-card__body">
+
+					<?php if ( $description ) : ?>
+					<div class="hcqb-product-description">
+						<?php echo wp_kses_post( $description ); ?>
+					</div>
+					<?php endif; ?>
+
+					<?php if ( is_array( $features ) && $features ) : ?>
+					<ul class="hcqb-features-list">
+						<?php foreach ( $features as $feat ) :
+							$feat_label = sanitize_text_field( $feat['label'] ?? '' );
+							$icon_id    = absint( $feat['icon_id'] ?? 0 );
+							if ( ! $feat_label ) { continue; }
+						?>
+						<li class="hcqb-feature">
+							<span class="hcqb-feature__icon-wrap" aria-hidden="true">
+								<?php if ( $icon_id ) : ?>
+								<img src="<?php echo esc_url( wp_get_attachment_image_url( $icon_id, 'thumbnail' ) ); ?>"
+								     alt=""
+								     class="hcqb-feature__icon"
+								     width="20" height="20">
+								<?php endif; ?>
+							</span>
+							<span class="hcqb-feature__label"><?php echo esc_html( $feat_label ); ?></span>
+						</li>
+						<?php endforeach; ?>
+					</ul>
+					<?php endif; ?>
+
+					<?php if ( $add_notes ) : ?>
+					<div class="hcqb-additional-notes"><?php echo wp_kses_post( $add_notes ); ?></div>
+					<?php endif; ?>
+
+					<?php // Flatpack + assembled pricing as red text ?>
+					<?php if ( $base_price > 0 ) : ?>
+					<p class="hcqb-price-text">
+						Priced at <?php echo esc_html( hcqb_format_price( $base_price ) ); ?> for flatpack
+					</p>
+					<?php endif; ?>
+
+					<?php if ( null !== $assembled_price ) : ?>
+					<p class="hcqb-price-text">
+						<?php echo esc_html( hcqb_format_price( $assembled_price ) ); ?> for Assembled Building
+					</p>
+					<?php endif; ?>
+
+					<?php // Plan document link ?>
+					<?php if ( $plan_doc_id ) :
+						$plan_url = wp_get_attachment_url( $plan_doc_id );
+					?>
+					<a href="<?php echo esc_url( $plan_url ); ?>"
+					   class="hcqb-plan-link"
+					   target="_blank"
+					   rel="noopener noreferrer">
+						View full plan here
+					</a>
+					<?php endif; ?>
+
+				</div><!-- .hcqb-desc-card__body -->
+			</details><!-- .hcqb-desc-card -->
+
+			<?php // Shipping details button ?>
+			<?php if ( $shipping_link ) : ?>
+			<a href="<?php echo esc_url( $shipping_link ); ?>"
+			   class="hcqb-btn hcqb-btn--shipping"
+			   target="_blank"
+			   rel="noopener noreferrer">
+				Click here for shipping details ↗
+			</a>
+			<?php endif; ?>
+
+			<?php // Get a Custom Quote button ?>
 			<?php if ( $quote_page_url ) : ?>
 			<a href="<?php echo esc_url( add_query_arg( 'product', $post_id, $quote_page_url ) ); ?>"
 			   class="hcqb-btn hcqb-btn--quote <?php echo esc_attr( $btn_class ); ?>">
 				Get a Custom Quote ↗
 			</a>
-			<?php endif; ?>
-
-			<?php if ( is_array( $features ) && $features ) : ?>
-			<ul class="hcqb-features-list">
-				<?php foreach ( $features as $feat ) :
-					$feat_label = sanitize_text_field( $feat['label'] ?? '' );
-					$icon_id    = absint( $feat['icon_id'] ?? 0 );
-					if ( ! $feat_label ) continue;
-				?>
-				<li class="hcqb-feature">
-					<?php if ( $icon_id ) : ?>
-					<img src="<?php echo esc_url( wp_get_attachment_image_url( $icon_id, 'thumbnail' ) ); ?>"
-					     alt=""
-					     class="hcqb-feature__icon"
-					     width="28" height="28">
-					<?php endif; ?>
-					<span class="hcqb-feature__label"><?php echo esc_html( $feat_label ); ?></span>
-				</li>
-				<?php endforeach; ?>
-			</ul>
 			<?php endif; ?>
 
 			<?php endif; // end purchase view — details column ?>
@@ -289,7 +367,7 @@ get_header();
 					<?php foreach ( $lease_extras as $extra ) :
 						$extra_label = sanitize_text_field( $extra['label']        ?? '' );
 						$extra_price = (float)             ( $extra['weekly_price'] ?? 0 );
-						if ( ! $extra_label ) continue;
+						if ( ! $extra_label ) { continue; }
 					?>
 					<li class="hcqb-lease-extra">
 						<span class="hcqb-lease-extra__label"><?php echo esc_html( $extra_label ); ?></span>
@@ -312,56 +390,11 @@ get_header();
 		</div><!-- .hcqb-product-details -->
 	</div><!-- .hcqb-product-layout -->
 
-	<?php // ----------------------------------------------------------------
-	// Expanded content sections — purchase view only
-	// --------------------------------------------------------------- ?>
-	<?php if ( 'product' === $view ) : ?>
-
-		<?php if ( $description ) : ?>
-		<div class="hcqb-product-description">
-			<?php echo wp_kses_post( $description ); ?>
-		</div>
-		<?php endif; ?>
-
-		<?php if ( $add_notes ) : ?>
-		<div class="hcqb-additional-notes">
-			<h3>Additional Notes</h3>
-			<p><?php echo nl2br( esc_html( $add_notes ) ); ?></p>
-		</div>
-		<?php endif; ?>
-
-		<?php if ( $plan_doc_id || $shipping_link ) : ?>
-		<div class="hcqb-product-links">
-			<?php if ( $plan_doc_id ) :
-				$plan_url = wp_get_attachment_url( $plan_doc_id );
-			?>
-			<a href="<?php echo esc_url( $plan_url ); ?>"
-			   class="hcqb-product-link"
-			   target="_blank"
-			   rel="noopener noreferrer">
-				↓ Download Floor Plan
-			</a>
-			<?php endif; ?>
-
-			<?php if ( $shipping_link ) : ?>
-			<a href="<?php echo esc_url( $shipping_link ); ?>"
-			   class="hcqb-product-link"
-			   target="_blank"
-			   rel="noopener noreferrer">
-				Shipping Details →
-			</a>
-			<?php endif; ?>
-		</div>
-		<?php endif; ?>
-
-	<?php endif; // end purchase-only expanded content ?>
-
 </div><!-- .hcqb-product-container -->
 </main>
 
 <?php // =========================================================================
 // Gallery thumbnail switcher — minimal inline script
-// No separate file needed; logic is 5 lines and only runs on this template.
 // ========================================================================= ?>
 <?php if ( count( $gallery_ids ) > 1 ) : ?>
 <script>

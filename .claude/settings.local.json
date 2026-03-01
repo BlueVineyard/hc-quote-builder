@@ -2,11 +2,43 @@
   "permissions": {
     "allow": [
       "Bash(php -l:*)",
-      "Read(//d/Dev Resources/Dev Enviroment/Local SItes/hc-quote-builder/**)"
+      "Read(//d/Dev Resources/Dev Enviroment/Local SItes/hc-quote-builder/**)",
+      "Bash(WP_PLUGIN=\"D:/Dev Resources/Dev Enviroment/Local SItes/hc-quote-builder/app/public/wp-content/plugins/hc-quote-builder\")",
+      "Bash(REPO=\"D:/Blue Vineyard/Github - BV/hc-quote-builder\")",
+      "Bash(__NEW_LINE_7518558a7a05b305__ cp \"$REPO/includes/class-hcqb-settings.php\" \"$WP_PLUGIN/includes/class-hcqb-settings.php\")",
+      "Bash(__NEW_LINE_7518558a7a05b305__ cp \"$REPO/includes/class-hcqb-shortcodes.php\" \"$WP_PLUGIN/includes/class-hcqb-shortcodes.php\")",
+      "Bash(__NEW_LINE_7518558a7a05b305__ cp \"$REPO/templates/quote-builder/frame-2-contact.php\" \"$WP_PLUGIN/templates/quote-builder/frame-2-contact.php\")",
+      "Bash(__NEW_LINE_7518558a7a05b305__ cp \"$REPO/assets/js/frontend/hcqb-quote-builder.js\" \"$WP_PLUGIN/assets/js/frontend/hcqb-quote-builder.js\")",
+      "Bash(__NEW_LINE_7518558a7a05b305__ cp \"$REPO/assets/css/frontend/hcqb-quote-builder.css\" \"$WP_PLUGIN/assets/css/frontend/hcqb-quote-builder.css\")",
+      "Bash(__NEW_LINE_7518558a7a05b305__ echo \"All 5 files synced.\")",
+      "Bash(__NEW_LINE_378f39186aa41f31__ cp \"$REPO/templates/single-hc-containers.php\" \"$WP_PLUGIN/templates/single-hc-containers.php\")",
+      "Bash(__NEW_LINE_378f39186aa41f31__ cp \"$REPO/assets/css/frontend/hcqb-product-page.css\" \"$WP_PLUGIN/assets/css/frontend/hcqb-product-page.css\")",
+      "Bash(__NEW_LINE_378f39186aa41f31__ echo \"Synced.\")",
+      "Bash(WP=\"D:/Dev Resources/Dev Enviroment/Local SItes/hc-quote-builder/app/public/wp-content/plugins/hc-quote-builder\")",
+      "Bash(GIT=\"D:/Blue Vineyard/Github - BV/hc-quote-builder\")",
+      "Bash(__NEW_LINE_3fd9ce6445861470__ cp \"$GIT/admin/class-hcqb-metabox-container.php\" \"$WP/admin/class-hcqb-metabox-container.php\")",
+      "Bash(__NEW_LINE_3fd9ce6445861470__ cp \"$GIT/templates/single-hc-containers.php\" \"$WP/templates/single-hc-containers.php\")",
+      "Bash(__NEW_LINE_3fd9ce6445861470__ cp \"$GIT/includes/class-hcqb-shortcodes.php\" \"$WP/includes/class-hcqb-shortcodes.php\")",
+      "Bash(__NEW_LINE_3fd9ce6445861470__ echo \"Synced\")",
+      "Bash(__NEW_LINE_cd99854bfd2c99e2__ cp \"$GIT/includes/class-hcqb-settings.php\" \"$WP/includes/class-hcqb-settings.php\")",
+      "Bash(__NEW_LINE_cd99854bfd2c99e2__ cp \"$GIT/templates/quote-builder/frame-1-preview.php\" \"$WP/templates/quote-builder/frame-1-preview.php\")",
+      "Bash(__NEW_LINE_cd99854bfd2c99e2__ echo \"Synced\")",
+      "Bash(__NEW_LINE_9c96e6273c655f58__ cp \"$GIT/assets/css/frontend/hcqb-quote-builder.css\" \"$WP/assets/css/frontend/hcqb-quote-builder.css\")",
+      "Bash(__NEW_LINE_9c96e6273c655f58__ cp \"$GIT/templates/quote-builder/frame-2-contact.php\" \"$WP/templates/quote-builder/frame-2-contact.php\")",
+      "Bash(__NEW_LINE_9c96e6273c655f58__ cp \"$GIT/assets/js/frontend/hcqb-quote-builder.js\" \"$WP/assets/js/frontend/hcqb-quote-builder.js\")",
+      "Bash(__NEW_LINE_9c96e6273c655f58__ echo \"Synced\")",
+      "Bash(__NEW_LINE_def77ab7bb5d5149__ cp \"$GIT/includes/class-hcqb-settings.php\" \"$WP/includes/class-hcqb-settings.php\")",
+      "Bash(__NEW_LINE_def77ab7bb5d5149__ cp \"$GIT/includes/class-hcqb-helpers.php\" \"$WP/includes/class-hcqb-helpers.php\")",
+      "Bash(__NEW_LINE_def77ab7bb5d5149__ echo \"Synced\")",
+      "Bash(python wrap_fields.py)",
+      "Bash(python -c \":*)"
     ],
     "additionalDirectories": [
       "d:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$REPO\\includes",
-      "D:\\Dev Resources\\Dev Enviroment\\Local SItes\\hc-quote-builder\\app\\public\\wp-content\\plugins\\hc-quote-builder"
+      "D:\\Dev Resources\\Dev Enviroment\\Local SItes\\hc-quote-builder\\app\\public\\wp-content\\plugins\\hc-quote-builder",
+      "D:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$SRC",
+      "D:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$REPO\\assets\\js\\admin",
+      "d:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$SRC\\includes"
     ]
   }
 }

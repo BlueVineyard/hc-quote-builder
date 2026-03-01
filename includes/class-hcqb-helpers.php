@@ -124,10 +124,12 @@ function hcqb_render_stars( float $rating ): string {
 // -------------------------------------------------------------------------
 
 /**
- * Fetch the active hc-quote-configs post linked to a given product ID.
+ * Fetch the active hc-quote-configs post for a given product ID.
  *
- * Returns null if no active config exists for the product — callers should
- * always check for null before using the return value.
+ * Lookup order:
+ *   1. A published config explicitly linked to $product_id with status = active.
+ *   2. The global default config set in Settings → Quote Builder (if active).
+ *   3. null — callers should always check for null before using the return value.
  *
  * @param int $product_id The hc-containers post ID.
  * @return WP_Post|null
@@ -137,6 +139,7 @@ function hcqb_get_active_config_for_product( int $product_id ): ?WP_Post {
 		return null;
 	}
 
+	// 1. Product-specific config.
 	$configs = get_posts( [
 		'post_type'      => 'hc-quote-configs',
 		'post_status'    => 'publish',
@@ -156,5 +159,25 @@ function hcqb_get_active_config_for_product( int $product_id ): ?WP_Post {
 		],
 	] );
 
-	return $configs[0] ?? null;
+	if ( ! empty( $configs ) ) {
+		return $configs[0];
+	}
+
+	// 2. Global default config fallback.
+	$default_id = absint( hcqb_get_setting( 'default_config_id' ) );
+	if ( ! $default_id ) {
+		return null;
+	}
+
+	$default = get_post( $default_id );
+	if (
+		$default instanceof WP_Post &&
+		'hc-quote-configs' === $default->post_type &&
+		'publish'          === $default->post_status &&
+		'active'           === get_post_meta( $default_id, 'hcqb_config_status', true )
+	) {
+		return $default;
+	}
+
+	return null;
 }
