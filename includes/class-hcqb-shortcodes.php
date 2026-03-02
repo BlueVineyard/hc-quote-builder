@@ -741,10 +741,14 @@ class HCQB_Shortcodes {
 		usort( $image_rules, fn( $a, $b ) => count( $b['match_tags'] ) <=> count( $a['match_tags'] ) );
 
 		// Feature pill questions — max 4, in admin order.
-		$pill_questions = array_slice(
+		$pill_questions = array_map( function ( $q ) {
+			$icon_id = absint( $q['pill_icon_id'] ?? 0 );
+			$q['pill_icon_url'] = $icon_id ? ( wp_get_attachment_url( $icon_id ) ?: '' ) : '';
+			return $q;
+		}, array_slice(
 			array_values( array_filter( $questions, fn( $q ) => ! empty( $q['show_in_pill'] ) ) ),
 			0, 4
-		);
+		) );
 
 		// Frame 2 — variables passed into frame-2-contact.php.
 		$prefix_options      = (array) ( hcqb_get_setting( 'prefix_options' )      ?: [ 'Mr', 'Mrs', 'Ms', 'Dr' ] );

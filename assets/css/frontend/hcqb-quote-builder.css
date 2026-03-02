@@ -389,25 +389,51 @@
    ============================================================================= */
 
 .hcqb-feature-pills {
-	display: none;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px 0;
 }
 
 .hcqb-pill {
 	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	padding: 8px 12px;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 16px 8px 8px;
 	border: 1px solid var( --hcqb-qb-border );
-	border-radius: 20px;
-	font-size: 12px;
+	border-radius: 50px;
 	background: var( --hcqb-qb-bg );
 	transition: border-color 0.15s, background 0.15s;
-	min-width: 80px;
 }
 
 .hcqb-pill--active {
 	border-color: var( --hcqb-qb-accent );
-	background: var( --hcqb-qb-pill-active );
+}
+
+/* Icon circle */
+.hcqb-pill__icon-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	background: var( --hcqb-qb-accent );
+	flex-shrink: 0;
+}
+
+.hcqb-pill__icon {
+	width: 28px;
+	height: 28px;
+	object-fit: contain;
+	filter: brightness( 0 ) invert( 1 );
+}
+
+/* Text block */
+.hcqb-pill__content {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
 }
 
 .hcqb-pill__label {
@@ -421,6 +447,7 @@
 .hcqb-pill__value {
 	color: var( --hcqb-qb-text );
 	font-weight: 500;
+	font-size: 13px;
 }
 
 /* =============================================================================

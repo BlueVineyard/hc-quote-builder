@@ -77,8 +77,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php foreach ( $pill_questions as $pill_q ) : ?>
 		<div class="hcqb-pill"
 		     data-question-key="<?php echo esc_attr( $pill_q['key'] ); ?>">
-			<span class="hcqb-pill__label"><?php echo esc_html( $pill_q['label'] ); ?></span>
-			<span class="hcqb-pill__value">—</span>
+			<?php if ( ! empty( $pill_q['pill_icon_url'] ) ) : ?>
+			<span class="hcqb-pill__icon-wrap">
+				<img src="<?php echo esc_url( $pill_q['pill_icon_url'] ); ?>"
+				     class="hcqb-pill__icon" alt="" width="28" height="28">
+			</span>
+			<?php endif; ?>
+			<span class="hcqb-pill__content">
+				<span class="hcqb-pill__label"><?php echo esc_html( $pill_q['label'] ); ?></span>
+				<span class="hcqb-pill__value">—</span>
+			</span>
 		</div>
 		<?php endforeach; ?>
 	</div>

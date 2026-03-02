@@ -71,6 +71,22 @@
 	// Question row — init
 	// =========================================================================
 
+	function initRemovePillIcon( row ) {
+		var removeBtn = row.querySelector( '.hcqb-remove-pill-icon' );
+		if ( ! removeBtn ) { return; }
+		removeBtn.addEventListener( 'click', function () {
+			var hidden  = row.querySelector( '.hcqb-pill-icon-id' );
+			var preview = row.querySelector( '.hcqb-pill-icon-preview' );
+			if ( hidden ) { hidden.value = '0'; }
+			if ( preview ) {
+				var empty = document.createElement( 'span' );
+				empty.className = 'hcqb-pill-icon-preview hcqb-pill-icon-empty';
+				preview.parentNode.replaceChild( empty, preview );
+			}
+			this.remove();
+		} );
+	}
+
 	function initQuestionRow( row, expanded ) {
 		// Toggle expand / collapse.
 		var toggleBtn = row.querySelector( '.hcqb-toggle-question' );
@@ -127,6 +143,56 @@
 				refreshConditionalDropdowns();
 			} );
 		}
+
+		// Show in Pill checkbox: toggle Pill Icon row visibility.
+		var pillCheck   = row.querySelector( '[name$="[show_in_pill]"]' );
+		var pillIconRow = row.querySelector( '.hcqb-pill-icon-row' );
+		if ( pillCheck && pillIconRow ) {
+			pillCheck.addEventListener( 'change', function () {
+				pillIconRow.style.display = this.checked ? '' : 'none';
+			} );
+		}
+
+		// "Choose Icon" button.
+		var chooseIconBtn = row.querySelector( '.hcqb-choose-pill-icon' );
+		if ( chooseIconBtn ) {
+			chooseIconBtn.addEventListener( 'click', function () {
+				var frame = wp.media( {
+					title:    'Choose Pill Icon',
+					button:   { text: 'Use This Icon' },
+					multiple:  false,
+					library:  { type: 'image' },
+				} );
+				frame.on( 'select', function () {
+					var attachment = frame.state().get( 'selection' ).first().toJSON();
+					var thumbUrl   = ( attachment.sizes && attachment.sizes.thumbnail )
+						? attachment.sizes.thumbnail.url : attachment.url;
+					var hidden  = row.querySelector( '.hcqb-pill-icon-id' );
+					var preview = row.querySelector( '.hcqb-pill-icon-preview' );
+					if ( hidden ) { hidden.value = attachment.id; }
+					if ( preview && preview.tagName === 'SPAN' ) {
+						var img    = document.createElement( 'img' );
+						img.className = 'hcqb-pill-icon-preview';
+						img.width = 40; img.height = 40; img.alt = ''; img.src = thumbUrl;
+						preview.parentNode.replaceChild( img, preview );
+					} else if ( preview ) {
+						preview.src = thumbUrl;
+					}
+					if ( ! row.querySelector( '.hcqb-remove-pill-icon' ) ) {
+						var btn = document.createElement( 'button' );
+						btn.type = 'button';
+						btn.className = 'button hcqb-remove-pill-icon';
+						btn.textContent = 'Remove';
+						chooseIconBtn.parentNode.insertBefore( btn, chooseIconBtn );
+						initRemovePillIcon( row );
+					}
+				} );
+				frame.open();
+			} );
+		}
+
+		// "Remove Icon" button for PHP-rendered rows with an existing icon.
+		initRemovePillIcon( row );
 
 		// Conditional checkbox.
 		var condCheck = row.querySelector( '.hcqb-is-conditional-check' );
@@ -236,6 +302,12 @@
 					'<td><input type="text" name="' + escAttr( b ) + '[helper_text]" value="" class="regular-text" placeholder="Optional hint shown below the question"></td></tr>' +
 					'<tr><th>Show in Pill</th>' +
 					'<td><label><input type="checkbox" name="' + escAttr( b ) + '[show_in_pill]" value="1"> Display selection as a feature pill (max 4 pills total)</label></td></tr>' +
+					'<tr class="hcqb-pill-icon-row" style="display:none"><th><label>Pill Icon</label></th>' +
+					'<td>' +
+						'<input type="hidden" name="' + escAttr( b ) + '[pill_icon_id]" value="0" class="hcqb-pill-icon-id">' +
+						'<span class="hcqb-pill-icon-preview hcqb-pill-icon-empty"></span>' +
+						'<button type="button" class="button hcqb-choose-pill-icon">Choose Icon</button>' +
+					'</td></tr>' +
 					'<tr><th>Conditional</th>' +
 					'<td>' +
 						'<label><input type="checkbox" name="' + escAttr( b ) + '[is_conditional]" value="1" class="hcqb-is-conditional-check"> Only show when another question\'s answer is…</label>' +

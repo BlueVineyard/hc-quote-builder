@@ -6,7 +6,8 @@
  *
  * Each pill has data-question-key matching the question key. On every
  * selection change, the pill's .hcqb-pill__value is updated with the
- * currently selected option label, or "—" if nothing is selected.
+ * currently selected option label + price (e.g. "1 Extra + $140.00"),
+ * or "—" if nothing is selected.
  *
  * Pills inside hidden conditional questions are treated as unselected.
  *
@@ -30,6 +31,8 @@
 				if ( ! valueEl ) { return; }
 
 				var selectedLabel = '';
+				var price         = 0;
+				var priceType     = 'addition';
 
 				// Selector scoped to visible (non-hidden) question wrappers.
 				var questionSelector = '.hcqb-question:not([aria-hidden="true"])[data-question-key="' + questionKey + '"]';
@@ -44,21 +47,31 @@
 						if ( priceSpan ) { priceSpan.remove(); }
 						selectedLabel = clone.textContent.trim();
 					}
+					price     = parseFloat( checked.dataset.price     || 0 );
+					priceType = checked.dataset.priceType || 'addition';
 				}
 
-				// Select / dropdown — use selected option text (strip price annotation).
+				// Select / dropdown — use selected option text (strip price annotation) + data-price.
 				if ( ! selectedLabel ) {
 					var select = document.querySelector( questionSelector + ' select' );
 					if ( select && select.value ) {
 						var opt = select.options[ select.selectedIndex ];
 						if ( opt ) {
-							// Strip anything in parentheses (price annotation) at end.
 							selectedLabel = opt.textContent.trim().replace( /\s*\([^)]*\)\s*$/, '' );
+							price     = parseFloat( opt.dataset.price     || 0 );
+							priceType = opt.dataset.priceType || 'addition';
 						}
 					}
 				}
 
-				valueEl.textContent = selectedLabel || '—';
+				// Append price if non-zero.
+				var displayText = selectedLabel;
+				if ( selectedLabel && price > 0 ) {
+					var sign = priceType === 'deduction' ? '− $' : '+ $';
+					displayText += ' ' + sign + price.toFixed( 2 );
+				}
+
+				valueEl.textContent = displayText || '—';
 				pill.classList.toggle( 'hcqb-pill--active', Boolean( selectedLabel ) );
 			} );
 		},

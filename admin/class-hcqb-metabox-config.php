@@ -166,7 +166,9 @@ class HCQB_Metabox_Config {
 		$input_type = $q['input_type']                 ?? 'radio';
 		$required   = ! empty( $q['required']         ) ? '1' : '0';
 		$helper     = esc_attr( $q['helper_text']     ?? '' );
-		$show_pill  = ! empty( $q['show_in_pill']     ) ? '1' : '0';
+		$show_pill    = ! empty( $q['show_in_pill']   ) ? '1' : '0';
+		$pill_icon_id = absint( $q['pill_icon_id']    ?? 0 );
+		$pill_icon_url = $pill_icon_id ? wp_get_attachment_url( $pill_icon_id ) : '';
 		$is_cond    = ! empty( $q['is_conditional']   ) ? '1' : '0';
 		$sw_q       = $q['show_when_question'] ?? '';
 		$sw_o       = $q['show_when_option']   ?? '';
@@ -257,6 +259,23 @@ class HCQB_Metabox_Config {
 									<?php checked( $show_pill, '1' ); ?>>
 								Display selection as a feature pill (max 4 pills total)
 							</label>
+						</td>
+					</tr>
+					<tr class="hcqb-pill-icon-row"<?php echo $show_pill !== '1' ? ' style="display:none"' : ''; ?>>
+						<th><label>Pill Icon</label></th>
+						<td>
+							<input type="hidden"
+								name="<?php echo esc_attr( $base ); ?>[pill_icon_id]"
+								value="<?php echo $pill_icon_id; ?>"
+								class="hcqb-pill-icon-id">
+							<?php if ( $pill_icon_url ) : ?>
+								<img src="<?php echo esc_url( $pill_icon_url ); ?>"
+									class="hcqb-pill-icon-preview" width="40" height="40" alt="">
+								<button type="button" class="button hcqb-remove-pill-icon">Remove</button>
+							<?php else : ?>
+								<span class="hcqb-pill-icon-preview hcqb-pill-icon-empty"></span>
+							<?php endif; ?>
+							<button type="button" class="button hcqb-choose-pill-icon">Choose Icon</button>
 						</td>
 					</tr>
 					<tr>
@@ -663,6 +682,7 @@ class HCQB_Metabox_Config {
 				'required'             => ! empty( $q['required'] ) ? 1 : 0,
 				'helper_text'          => sanitize_text_field( $q['helper_text'] ?? '' ),
 				'show_in_pill'         => ! empty( $q['show_in_pill'] ) ? 1 : 0,
+				'pill_icon_id'         => absint( $q['pill_icon_id'] ?? 0 ),
 				'is_conditional'       => ! empty( $q['is_conditional'] ) ? 1 : 0,
 				'show_when_conditions' => $clean_conds,
 				'options'              => $clean_options,
