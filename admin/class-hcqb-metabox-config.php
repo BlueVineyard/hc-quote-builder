@@ -65,22 +65,11 @@ class HCQB_Metabox_Config {
 		wp_nonce_field( 'hcqb_save_config_' . $post->ID, 'hcqb_config_nonce' );
 
 		$status            = get_post_meta( $post->ID, 'hcqb_config_status',    true ) ?: 'inactive';
-		$linked_product    = (int)   get_post_meta( $post->ID, 'hcqb_linked_product',   true );
 		$base_price        = (float) get_post_meta( $post->ID, 'hcqb_base_price',        true );
 		$default_image_id  = absint(  get_post_meta( $post->ID, 'hcqb_default_image_id', true ) );
 		$default_image_url = $default_image_id
 			? ( wp_get_attachment_image_url( $default_image_id, 'thumbnail' ) ?: '' )
 			: '';
-		$taken_ids         = self::get_taken_product_ids( $post->ID );
-
-		$containers = get_posts( [
-			'post_type'      => 'hc-containers',
-			'post_status'    => 'publish',
-			'numberposts'    => -1,
-			'orderby'        => 'title',
-			'order'          => 'ASC',
-			'no_found_rows'  => true,
-		] );
 		?>
 		<table class="form-table hcqb-meta-table">
 			<tr>
@@ -93,37 +82,13 @@ class HCQB_Metabox_Config {
 				</td>
 			</tr>
 			<tr>
-				<th><label for="hcqb_linked_product">Linked Product</label></th>
-				<td>
-					<select name="hcqb_linked_product" id="hcqb_linked_product">
-						<option value="0">— None —</option>
-						<?php foreach ( $containers as $container ) :
-							$is_taken    = in_array( $container->ID, $taken_ids, true );
-							$is_selected = ( $linked_product === $container->ID );
-						?>
-						<option
-							value="<?php echo esc_attr( $container->ID ); ?>"
-							<?php selected( $is_selected ); ?>
-							<?php disabled( $is_taken && ! $is_selected ); ?>
-						><?php
-							echo esc_html( $container->post_title );
-							if ( $is_taken && ! $is_selected ) {
-								echo esc_html( ' (already linked)' );
-							}
-						?></option>
-						<?php endforeach; ?>
-					</select>
-					<p class="description">One product may be linked to only one config.</p>
-				</td>
-			</tr>
-			<tr>
 				<th><label for="hcqb_base_price">Base Price</label></th>
 				<td>
 					<span style="line-height:30px;">$&nbsp;</span><input type="number"
 					       id="hcqb_base_price" name="hcqb_base_price"
 					       value="<?php echo esc_attr( $base_price ); ?>"
 					       min="0" step="0.01" style="width:110px;">
-					<p class="description">Starting price shown in the builder when used in standalone mode (no <code>?product=</code>).</p>
+					<p class="description">Starting price displayed in the quote builder preview.</p>
 				</td>
 			</tr>
 			<tr>
@@ -143,7 +108,24 @@ class HCQB_Metabox_Config {
 					<button type="button" class="button" id="hcqb-choose-default-image">Choose Image</button>
 					<button type="button" class="button" id="hcqb-remove-default-image"
 					        <?php echo $default_image_id ? '' : 'style="display:none;"'; ?>>Remove</button>
-					<p class="description">Preview image shown before any option is selected (standalone mode only).</p>
+					<p class="description">Preview image shown before any option is selected.</p>
+				</td>
+			</tr>
+			<tr>
+				<th colspan="2" style="padding-top:16px;border-top:1px solid #dcdcde;">Import Questions from JSON</th>
+			</tr>
+			<tr>
+				<td colspan="2">
+					<textarea id="hcqb-import-json" rows="6"
+					          style="width:100%;font-family:monospace;font-size:11px;resize:vertical;"
+					          placeholder="Paste JSON here..."></textarea>
+					<p style="margin-top:6px;">
+						<button type="button" id="hcqb-import-json-btn" class="button">Import Questions</button>
+						<span id="hcqb-import-status" style="margin-left:8px;font-style:italic;"></span>
+					</p>
+					<p class="description" style="color:#d63638;">
+						Warning: replaces ALL existing questions on this config. Cannot be undone.
+					</p>
 				</td>
 			</tr>
 		</table>
@@ -186,8 +168,8 @@ class HCQB_Metabox_Config {
 		$helper     = esc_attr( $q['helper_text']     ?? '' );
 		$show_pill  = ! empty( $q['show_in_pill']     ) ? '1' : '0';
 		$is_cond    = ! empty( $q['is_conditional']   ) ? '1' : '0';
-		$sw_q       = esc_attr( $q['show_when_question'] ?? '' );
-		$sw_o       = esc_attr( $q['show_when_option']   ?? '' );
+		$sw_q       = $q['show_when_question'] ?? '';
+		$sw_o       = $q['show_when_option']   ?? '';
 		$options    = is_array( $q['options'] ?? null ) ? $q['options'] : [];
 		$base       = "hcqb_questions[{$idx}]";
 		?>
@@ -221,6 +203,16 @@ class HCQB_Metabox_Config {
 								value="<?php echo $label; ?>"
 								class="regular-text hcqb-question-label-input"
 								placeholder="Question label">
+						</td>
+					</tr>
+					<tr>
+						<th><label>Key</label></th>
+						<td>
+							<input type="text"
+								value="<?php echo $key; ?>"
+								class="regular-text hcqb-key-edit-input"
+								placeholder="auto-generated from label">
+							<p class="description">Changing the key will break any conditions that reference this question.</p>
 						</td>
 					</tr>
 					<tr>
@@ -278,24 +270,43 @@ class HCQB_Metabox_Config {
 									class="hcqb-is-conditional-check">
 								Only show when another question's answer is…
 							</label>
-							<div class="hcqb-conditional-fields<?php echo $is_cond ? '' : ' hcqb-hidden'; ?>">
-								<select name="<?php echo esc_attr( $base ); ?>[show_when_question]"
+							<?php
+						// Normalize: support both old single-condition and new multi-condition format.
+						$conditions = [];
+						if ( ! empty( $q['show_when_conditions'] ) && is_array( $q['show_when_conditions'] ) ) {
+							$conditions = $q['show_when_conditions'];
+						} elseif ( $sw_q ) {
+							$conditions = [ [ 'question' => $sw_q, 'option' => $sw_o ] ];
+						} else {
+							$conditions = [ [ 'question' => '', 'option' => '' ] ];
+						}
+						?>
+						<div class="hcqb-conditional-fields<?php echo $is_cond ? '' : ' hcqb-hidden'; ?>">
+							<?php foreach ( $conditions as $c_idx => $cond ) :
+								$c_q = esc_attr( $cond['question'] ?? '' );
+								$c_o = esc_attr( $cond['option']   ?? '' );
+							?>
+							<div class="hcqb-condition-row">
+								<select name="<?php echo esc_attr( $base ); ?>[show_when_conditions][<?php echo $c_idx; ?>][question]"
 									class="hcqb-show-when-question">
 									<option value="">— Select question —</option>
-									<?php /* Options populated by JS on page load */ ?>
 								</select>
-								<select name="<?php echo esc_attr( $base ); ?>[show_when_option]"
+								<select name="<?php echo esc_attr( $base ); ?>[show_when_conditions][<?php echo $c_idx; ?>][option]"
 									class="hcqb-show-when-option">
 									<option value="">— Select option —</option>
-									<?php /* Options populated by JS after question select */ ?>
 								</select>
-								<?php if ( $sw_q ) : ?>
-									<input type="hidden" class="hcqb-init-sw-q" value="<?php echo $sw_q; ?>">
+								<?php if ( $c_q ) : ?>
+								<input type="hidden" class="hcqb-init-sw-q" value="<?php echo $c_q; ?>">
 								<?php endif; ?>
-								<?php if ( $sw_o ) : ?>
-									<input type="hidden" class="hcqb-init-sw-o" value="<?php echo $sw_o; ?>">
+								<?php if ( $c_o ) : ?>
+								<input type="hidden" class="hcqb-init-sw-o" value="<?php echo $c_o; ?>">
 								<?php endif; ?>
+								<button type="button" class="button hcqb-remove-condition"
+									<?php echo count( $conditions ) > 1 ? '' : 'style="display:none;"'; ?>>Remove</button>
 							</div>
+							<?php endforeach; ?>
+							<button type="button" class="button hcqb-add-condition">+ AND Condition</button>
+						</div>
 						</td>
 					</tr>
 				</table>
@@ -339,9 +350,10 @@ class HCQB_Metabox_Config {
 				value="<?php echo $label; ?>"
 				class="regular-text hcqb-option-label-input"
 				placeholder="Option label">
-			<span class="hcqb-slug-locked hcqb-option-slug-display" title="Option slug — immutable after first save"><?php
-				echo $slug ? esc_html( $opt['slug'] ) : '<em>auto</em>';
-			?></span>
+			<input type="text"
+				value="<?php echo $slug; ?>"
+				class="hcqb-option-slug-edit hcqb-option-slug-display"
+				placeholder="auto">
 			<span class="hcqb-extras-unit">$</span>
 			<input type="number"
 				name="<?php echo esc_attr( $base ); ?>[price]"
@@ -355,8 +367,9 @@ class HCQB_Metabox_Config {
 				<option value="deduction" <?php selected( $price_type, 'deduction' ); ?>>− deduct</option>
 			</select>
 			<select name="<?php echo esc_attr( $base ); ?>[option_role]" class="hcqb-option-role">
-				<option value="standard" <?php selected( $role, 'standard' ); ?>>Standard</option>
-				<option value="assembly" <?php selected( $role, 'assembly' ); ?>>Assembly</option>
+				<option value="standard"   <?php selected( $role, 'standard'   ); ?>>Standard</option>
+				<option value="base_price" <?php selected( $role, 'base_price' ); ?>>Base Price</option>
+				<option value="assembly"   <?php selected( $role, 'assembly'   ); ?>>Assembly</option>
 			</select>
 			<label class="hcqb-affects-image-label" title="Affects product image display">
 				<input type="checkbox"
@@ -524,14 +537,6 @@ class HCQB_Metabox_Config {
 		}
 		update_post_meta( $post_id, 'hcqb_config_status', $status );
 
-		// 1:1 enforcement: reject product already claimed by another config.
-		$product_id = absint( $_POST['hcqb_linked_product'] ?? 0 );
-		if ( $product_id && in_array( $product_id, self::get_taken_product_ids( $post_id ), true ) ) {
-			$product_id = 0;
-		}
-		update_post_meta( $post_id, 'hcqb_linked_product', $product_id );
-
-		// Standalone mode fields.
 		$base_price = max( 0.0, (float) ( $_POST['hcqb_base_price'] ?? 0 ) );
 		update_post_meta( $post_id, 'hcqb_base_price', $base_price );
 
@@ -618,7 +623,7 @@ class HCQB_Metabox_Config {
 				}
 
 				$option_role = sanitize_key( $opt['option_role'] ?? 'standard' );
-				if ( ! in_array( $option_role, [ 'standard', 'assembly' ], true ) ) {
+				if ( ! in_array( $option_role, [ 'standard', 'base_price', 'assembly' ], true ) ) {
 					$option_role = 'standard';
 				}
 
@@ -638,18 +643,29 @@ class HCQB_Metabox_Config {
 				$input_type = 'radio';
 			}
 
+			// Build show_when_conditions from submitted multi-condition rows.
+			$raw_conds   = is_array( $q['show_when_conditions'] ?? null ) ? $q['show_when_conditions'] : [];
+			$clean_conds = [];
+			foreach ( $raw_conds as $cond ) {
+				if ( ! is_array( $cond ) ) { continue; }
+				$cq = sanitize_key( $cond['question'] ?? '' );
+				$co = sanitize_key( $cond['option']   ?? '' );
+				if ( $cq ) {
+					$clean_conds[] = [ 'question' => $cq, 'option' => $co ];
+				}
+			}
+
 			$clean[] = [
-				'_uid'               => $q_uid,
-				'key'                => $q_key,
-				'label'              => $q_label,
-				'input_type'         => $input_type,
-				'required'           => ! empty( $q['required'] ) ? 1 : 0,
-				'helper_text'        => sanitize_text_field( $q['helper_text'] ?? '' ),
-				'show_in_pill'       => ! empty( $q['show_in_pill'] ) ? 1 : 0,
-				'is_conditional'     => ! empty( $q['is_conditional'] ) ? 1 : 0,
-				'show_when_question' => sanitize_key( $q['show_when_question'] ?? '' ),
-				'show_when_option'   => sanitize_key( $q['show_when_option']   ?? '' ),
-				'options'            => $clean_options,
+				'_uid'                 => $q_uid,
+				'key'                  => $q_key,
+				'label'                => $q_label,
+				'input_type'           => $input_type,
+				'required'             => ! empty( $q['required'] ) ? 1 : 0,
+				'helper_text'          => sanitize_text_field( $q['helper_text'] ?? '' ),
+				'show_in_pill'         => ! empty( $q['show_in_pill'] ) ? 1 : 0,
+				'is_conditional'       => ! empty( $q['is_conditional'] ) ? 1 : 0,
+				'show_when_conditions' => $clean_conds,
+				'options'              => $clean_options,
 			];
 		}
 
@@ -732,10 +748,6 @@ class HCQB_Metabox_Config {
 			if ( strpos( $key, 'hcqb_' ) !== 0 ) {
 				continue;
 			}
-			if ( 'hcqb_linked_product' === $key ) {
-				update_post_meta( $new_id, 'hcqb_linked_product', 0 );
-				continue;
-			}
 			if ( 'hcqb_config_status' === $key ) {
 				update_post_meta( $new_id, 'hcqb_config_status', 'inactive' );
 				continue;
@@ -806,36 +818,97 @@ class HCQB_Metabox_Config {
 		return $map;
 	}
 
-	/**
-	 * Return all hc-containers IDs already linked to a config other than $exclude_id.
-	 *
-	 * @param  int   $exclude_id  Post ID to skip (current config being edited).
-	 * @return int[]
-	 */
-	private static function get_taken_product_ids( int $exclude_id ): array {
-		$configs = get_posts( [
-			'post_type'      => 'hc-quote-configs',
-			'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
-			'numberposts'    => -1,
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-			'exclude'        => $exclude_id ? [ $exclude_id ] : [],
-			'meta_query'     => [
-				[
-					'key'     => 'hcqb_linked_product',
-					'value'   => '0',
-					'compare' => '!=',
-				],
-			],
-		] );
+	// =========================================================================
+	// AJAX — Import questions from JSON
+	// =========================================================================
 
-		$taken = [];
-		foreach ( $configs as $config_id ) {
-			$pid = (int) get_post_meta( $config_id, 'hcqb_linked_product', true );
-			if ( $pid ) {
-				$taken[] = $pid;
-			}
+	public static function handle_import_json(): void {
+		check_ajax_referer( 'hcqb_import_json', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( [ 'message' => 'Permission denied.' ], 403 );
 		}
-		return $taken;
+
+		$post_id = absint( $_POST['post_id'] ?? 0 );
+		if ( ! $post_id || get_post_type( $post_id ) !== 'hc-quote-configs' ) {
+			wp_send_json_error( [ 'message' => 'Invalid config post.' ] );
+		}
+
+		$raw     = wp_unslash( $_POST['json'] ?? '' );
+		$decoded = json_decode( $raw, true );
+
+		if ( ! is_array( $decoded ) || empty( $decoded['questions'] ) || ! is_array( $decoded['questions'] ) ) {
+			wp_send_json_error( [ 'message' => 'Invalid JSON: must have a non-empty "questions" array.' ] );
+		}
+
+		$valid_input_types  = [ 'radio', 'dropdown', 'checkbox' ];
+		$valid_price_types  = [ 'addition', 'deduction' ];
+		$valid_option_roles = [ '', 'base_price', 'assembly' ];
+
+		$clean = [];
+		foreach ( $decoded['questions'] as $q ) {
+			if ( ! is_array( $q ) || empty( $q['label'] ) ) {
+				continue;
+			}
+
+			$input_type = in_array( $q['input_type'] ?? '', $valid_input_types, true )
+				? $q['input_type']
+				: 'radio';
+
+			$clean_opts = [];
+			foreach ( (array) ( $q['options'] ?? [] ) as $o ) {
+				if ( ! is_array( $o ) || empty( $o['label'] ) ) {
+					continue;
+				}
+				$price_type  = in_array( $o['price_type'] ?? '', $valid_price_types, true )
+					? $o['price_type'] : 'addition';
+				$option_role = in_array( $o['option_role'] ?? '', $valid_option_roles, true )
+					? $o['option_role'] : '';
+
+				$clean_opts[] = [
+					'_uid'          => uniqid( 'o_', true ),
+					'slug'          => hcqb_generate_slug( sanitize_text_field( $o['label'] ) ),
+					'label'         => sanitize_text_field( $o['label'] ),
+					'price'         => round( (float) ( $o['price'] ?? 0 ), 2 ),
+					'price_type'    => $price_type,
+					'option_role'   => $option_role,
+					'affects_image' => (int) ! empty( $o['affects_image'] ),
+				];
+			}
+
+			// Build show_when_conditions — supports both new array format and old single-condition.
+			$raw_import_conds = is_array( $q['show_when_conditions'] ?? null ) ? $q['show_when_conditions'] : [];
+			if ( empty( $raw_import_conds ) && ! empty( $q['show_when_question'] ) ) {
+				$raw_import_conds = [ [ 'question' => $q['show_when_question'], 'option' => $q['show_when_option'] ?? '' ] ];
+			}
+			$clean_import_conds = [];
+			foreach ( $raw_import_conds as $cond ) {
+				if ( ! is_array( $cond ) ) { continue; }
+				$cq = sanitize_key( $cond['question'] ?? '' );
+				$co = sanitize_key( $cond['option']   ?? '' );
+				if ( $cq ) { $clean_import_conds[] = [ 'question' => $cq, 'option' => $co ]; }
+			}
+
+			$clean[] = [
+				'_uid'                 => uniqid( 'q_', true ),
+				'key'                  => hcqb_generate_slug( sanitize_text_field( $q['label'] ) ),
+				'label'                => sanitize_text_field( $q['label'] ),
+				'input_type'           => $input_type,
+				'required'             => (int) ! empty( $q['required'] ),
+				'helper_text'          => sanitize_text_field( $q['helper_text'] ?? '' ),
+				'show_in_pill'         => (int) ! empty( $q['show_in_pill'] ),
+				'is_conditional'       => (int) ! empty( $q['is_conditional'] ),
+				'show_when_conditions' => $clean_import_conds,
+				'options'              => $clean_opts,
+			];
+		}
+
+		if ( empty( $clean ) ) {
+			wp_send_json_error( [ 'message' => 'No valid questions found in JSON.' ] );
+		}
+
+		update_post_meta( $post_id, 'hcqb_questions', $clean );
+		wp_send_json_success( [ 'message' => 'Questions imported successfully. Reloading...' ] );
 	}
+
 }

@@ -24,18 +24,17 @@ class HCQB_Email {
 	// Admin notification
 	// -------------------------------------------------------------------------
 
-	public static function send_admin_notification( int $post_id, array $data, int $product_id ): bool {
-		$to           = hcqb_get_setting( 'admin_email' ) ?: get_option( 'admin_email', '' );
-		$from_name    = hcqb_get_setting( 'from_name' )   ?: get_option( 'blogname', '' );
-		$from_email   = hcqb_get_setting( 'from_email' )  ?: get_option( 'admin_email', '' );
-		$product_name  = get_the_title( $product_id );
+	public static function send_admin_notification( int $post_id, array $data ): bool {
+		$to            = hcqb_get_setting( 'admin_email' ) ?: get_option( 'admin_email', '' );
+		$from_name     = hcqb_get_setting( 'from_name' )   ?: get_option( 'blogname', '' );
+		$from_email    = hcqb_get_setting( 'from_email' )  ?: get_option( 'admin_email', '' );
 		$customer_name = self::customer_name( $data );
 
-		$raw_subject = hcqb_get_setting( 'admin_email_subject' ) ?: 'New Quote Request — {product_name}';
-		$subject     = self::replace_tokens( $raw_subject, $product_name, $customer_name );
+		$raw_subject = hcqb_get_setting( 'admin_email_subject' ) ?: 'New Quote Request';
+		$subject     = self::replace_tokens( $raw_subject, $customer_name );
 
 		$headers = self::build_headers( $from_name, $from_email );
-		$body    = self::build_admin_body( $post_id, $data, $product_id, $product_name, $customer_name );
+		$body    = self::build_admin_body( $post_id, $data, $customer_name );
 
 		return (bool) wp_mail( $to, $subject, $body, $headers );
 	}
@@ -44,18 +43,17 @@ class HCQB_Email {
 	// Customer copy
 	// -------------------------------------------------------------------------
 
-	public static function send_customer_copy( int $post_id, array $data, int $product_id ): bool {
-		$to           = $data['email'];
-		$from_name    = hcqb_get_setting( 'from_name' )  ?: get_option( 'blogname', '' );
-		$from_email   = hcqb_get_setting( 'from_email' ) ?: get_option( 'admin_email', '' );
-		$product_name  = get_the_title( $product_id );
+	public static function send_customer_copy( int $post_id, array $data ): bool {
+		$to            = $data['email'];
+		$from_name     = hcqb_get_setting( 'from_name' )  ?: get_option( 'blogname', '' );
+		$from_email    = hcqb_get_setting( 'from_email' ) ?: get_option( 'admin_email', '' );
 		$customer_name = self::customer_name( $data );
 
-		$raw_subject = hcqb_get_setting( 'customer_email_subject' ) ?: 'Your Quote Request — {product_name}';
-		$subject     = self::replace_tokens( $raw_subject, $product_name, $customer_name );
+		$raw_subject = hcqb_get_setting( 'customer_email_subject' ) ?: 'Your Quote Request';
+		$subject     = self::replace_tokens( $raw_subject, $customer_name );
 
 		$headers = self::build_headers( $from_name, $from_email );
-		$body    = self::build_customer_body( $post_id, $data, $product_id, $product_name, $customer_name );
+		$body    = self::build_customer_body( $post_id, $data, $customer_name );
 
 		return (bool) wp_mail( $to, $subject, $body, $headers );
 	}
@@ -68,12 +66,8 @@ class HCQB_Email {
 		return trim( $data['prefix'] . ' ' . $data['first_name'] . ' ' . $data['last_name'] );
 	}
 
-	private static function replace_tokens( string $subject, string $product_name, string $customer_name ): string {
-		return str_replace(
-			[ '{product_name}', '{customer_name}' ],
-			[ $product_name,    $customer_name    ],
-			$subject
-		);
+	private static function replace_tokens( string $subject, string $customer_name ): string {
+		return str_replace( '{customer_name}', $customer_name, $subject );
 	}
 
 	private static function build_headers( string $from_name, string $from_email ): array {
@@ -83,17 +77,13 @@ class HCQB_Email {
 		];
 	}
 
-	private static function build_admin_body(
-		int $post_id, array $data, int $product_id, string $product_name, string $customer_name
-	): string {
+	private static function build_admin_body( int $post_id, array $data, string $customer_name ): string {
 		ob_start();
 		include HCQB_PLUGIN_DIR . 'templates/emails/admin-notification.php';
 		return ob_get_clean();
 	}
 
-	private static function build_customer_body(
-		int $post_id, array $data, int $product_id, string $product_name, string $customer_name
-	): string {
+	private static function build_customer_body( int $post_id, array $data, string $customer_name ): string {
 		ob_start();
 		include HCQB_PLUGIN_DIR . 'templates/emails/customer-copy.php';
 		return ob_get_clean();

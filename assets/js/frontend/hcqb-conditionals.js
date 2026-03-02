@@ -3,10 +3,19 @@
  *
  * Shows and hides conditional questions based on the current selection state.
  *
- * Each conditional question has:
+ * Single-condition questions have:
  *   data-conditional="true"
  *   data-show-when-question="question_key"
  *   data-show-when-option="option_slug"
+ *
+ * Multi-condition (AND) questions have:
+ *   data-conditional="true"
+ *   data-show-when-conditions='[{"question":"key","option":"slug"},...]'
+ *   All conditions must be satisfied for the question to show.
+ *
+ * Auto-check: when a conditional question is revealed and it contains exactly
+ * one radio input (e.g. assembly upgrade questions), that input is auto-checked
+ * so its price is applied without user interaction.
  *
  * When a conditional is hidden, its inputs are reset so they no longer
  * contribute to pricing or image matching. A re-dispatch is fired after
@@ -16,15 +25,29 @@
  * conditional, aria-hidden is "true", so the next run finds isHidden===true
  * and skips — no infinite loop.
  *
- * Constraint: v1.0 only supports single-level conditionals (a conditional
- * question may depend on a non-conditional question only).
- *
  * Exposes: window.HCQBConditionals
  * Depends on: window.HCQBDispatch
  */
 
 ( function () {
 	'use strict';
+
+	/**
+	 * Returns true if the given question key has the given option slug
+	 * currently selected (radio/checkbox checked or select value matches).
+	 */
+	function isOptionSelected( questionKey, optionSlug ) {
+		var checkedInput = document.querySelector(
+			'.hcqb-question[data-question-key="' + questionKey + '"] input[value="' + optionSlug + '"]:checked'
+		);
+		if ( checkedInput ) {
+			return true;
+		}
+		var sel = document.querySelector(
+			'.hcqb-question[data-question-key="' + questionKey + '"] select'
+		);
+		return !! ( sel && sel.value === optionSlug );
+	}
 
 	var HCQBConditionals = {
 
@@ -36,34 +59,38 @@
 			var changed = false;
 
 			document.querySelectorAll( '[data-conditional="true"]' ).forEach( function ( wrapper ) {
-				var triggerKey    = wrapper.dataset.showWhenQuestion;
-				var triggerOption = wrapper.dataset.showWhenOption;
-				var isHidden      = wrapper.getAttribute( 'aria-hidden' ) === 'true';
-
+				var isHidden  = wrapper.getAttribute( 'aria-hidden' ) === 'true';
 				var shouldShow = false;
 
-				// Check radio / checkbox inputs.
-				var checkedInput = document.querySelector(
-					'.hcqb-question[data-question-key="' + triggerKey + '"] input[value="' + triggerOption + '"]:checked'
-				);
-				if ( checkedInput ) {
-					shouldShow = true;
-				}
-
-				// Check select / dropdown.
-				if ( ! shouldShow ) {
-					var triggerSelect = document.querySelector(
-						'.hcqb-question[data-question-key="' + triggerKey + '"] select'
-					);
-					if ( triggerSelect && triggerSelect.value === triggerOption ) {
-						shouldShow = true;
+				// Multi-condition (AND logic) — data-show-when-conditions JSON array.
+				var multiAttr = wrapper.dataset.showWhenConditions;
+				if ( multiAttr ) {
+					try {
+						var conditions = JSON.parse( multiAttr );
+						shouldShow = conditions.length > 0 && conditions.every( function ( cond ) {
+							return isOptionSelected( cond.question, cond.option );
+						} );
+					} catch ( e ) {
+						shouldShow = false;
 					}
+				} else {
+					// Single-condition — data-show-when-question / data-show-when-option.
+					var triggerKey    = wrapper.dataset.showWhenQuestion;
+					var triggerOption = wrapper.dataset.showWhenOption;
+					shouldShow = isOptionSelected( triggerKey, triggerOption );
 				}
 
 				if ( shouldShow && isHidden ) {
 					// Reveal.
 					wrapper.removeAttribute( 'aria-hidden' );
 					wrapper.style.display = '';
+
+					// Auto-check single-option radio questions (e.g. assembly upgrade).
+					var radios = wrapper.querySelectorAll( 'input[type="radio"]' );
+					if ( radios.length === 1 && ! radios[ 0 ].checked ) {
+						radios[ 0 ].checked = true;
+					}
+
 					changed = true;
 				} else if ( ! shouldShow && ! isHidden ) {
 					// Hide + reset inputs.

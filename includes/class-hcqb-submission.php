@@ -50,7 +50,7 @@ class HCQB_Submission {
 	// Sanitisation — clean and structure all submitted POST data
 	// -------------------------------------------------------------------------
 
-	public static function sanitise_data( array $post, int $product_id ): array {
+	public static function sanitise_data( array $post ): array {
 
 		// Phone — combine prefix + local number.
 		$phone_prefix = sanitize_text_field( $post['phone_prefix'] ?? '' );
@@ -67,10 +67,13 @@ class HCQB_Submission {
 			}
 		}
 
-		// Build question-key → question-label lookup from the active config so
-		// we can store human-readable labels rather than internal keys.
-		$config    = hcqb_get_active_config_for_product( $product_id );
-		$questions = $config ? ( get_post_meta( $config->ID, 'hcqb_questions', true ) ?: [] ) : [];
+		// Build question-key → question-label lookup from the global default config
+		// so we can store human-readable labels rather than internal keys.
+		$config_id = absint( hcqb_get_setting( 'default_config_id' ) );
+		$config    = $config_id ? get_post( $config_id ) : null;
+		$questions = ( $config && 'hc-quote-configs' === $config->post_type )
+			? ( get_post_meta( $config->ID, 'hcqb_questions', true ) ?: [] )
+			: [];
 		$q_labels  = [];
 		foreach ( $questions as $q ) {
 			$q_labels[ $q['key'] ] = $q['label'] ?? $q['key'];
@@ -105,6 +108,29 @@ class HCQB_Submission {
 			}
 		}
 
+		// Find question labels whose options carry option_role "base_price" (e.g. Size).
+		// These become the starting total — not line items — so remove them from the list.
+		$base_price_q_labels = [];
+		foreach ( $questions as $q ) {
+			foreach ( $q['options'] ?? [] as $opt ) {
+				if ( ( $opt['option_role'] ?? '' ) === 'base_price' ) {
+					$base_price_q_labels[] = sanitize_text_field( $q['label'] ?? $q['key'] );
+					break;
+				}
+			}
+		}
+
+		$base_price       = 0.0;
+		$filtered_options = [];
+		foreach ( $selected_options as $entry ) {
+			if ( in_array( $entry['question_label'], $base_price_q_labels, true ) ) {
+				$base_price = (float) $entry['price'];
+			} else {
+				$filtered_options[] = $entry;
+			}
+		}
+		$selected_options = $filtered_options;
+
 		// Shipping distance — strip any non-numeric chars (e.g. "342 km" → 342.0).
 		$distance_raw = sanitize_text_field( $post['shipping_distance'] ?? '' );
 		$distance_km  = (float) preg_replace( '/[^\d.]/', '', $distance_raw );
@@ -123,6 +149,7 @@ class HCQB_Submission {
 			'lng'                  => sanitize_text_field( $post['lng']              ?? '' ),
 			'shipping_distance_km' => $distance_km,
 			'total_price'          => (float) ( $post['total_price']                ?? 0 ),
+			'base_price'           => $base_price,
 			'selected_options'     => $selected_options,
 		];
 	}
@@ -131,15 +158,13 @@ class HCQB_Submission {
 	// Meta persistence — all §15.3 keys
 	// -------------------------------------------------------------------------
 
-	public static function save_meta( int $post_id, array $data, int $product_id ): void {
-		$base_price = (float) get_post_meta( $product_id, 'hcqb_product_price', true );
+	public static function save_meta( int $post_id, array $data ): void {
+		$base_price = $data['base_price'] ?? 0.0;
 
 		// First status key from settings (stable internal key, never a label).
 		$status_labels = (array) ( hcqb_get_setting( 'submission_status_labels' ) ?: [] );
 		$first_key     = ! empty( $status_labels[0]['key'] ) ? $status_labels[0]['key'] : 'status_1';
 
-		update_post_meta( $post_id, 'hcqb_linked_product_id',    $product_id );
-		update_post_meta( $post_id, 'hcqb_product_name',         get_the_title( $product_id ) );
 		update_post_meta( $post_id, 'hcqb_base_price',           $base_price );
 		update_post_meta( $post_id, 'hcqb_selected_options',     $data['selected_options'] );
 		update_post_meta( $post_id, 'hcqb_total_price',          $data['total_price'] );

@@ -8,8 +8,6 @@
  * Variables in scope:
  *   $post_id       int     The hc-quote-submissions post ID
  *   $data          array   Sanitised submission data from HCQB_Submission::sanitise_data()
- *   $product_id    int     The hc-containers post ID
- *   $product_name  string  Product title at submission time
  *   $customer_name string  Full name (prefix + first + last)
  *
  * @package HC_Quote_Builder
@@ -19,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$base_price   = (float) get_post_meta( $product_id, 'hcqb_product_price', true );
+$base_price   = (float) get_post_meta( $post_id, 'hcqb_base_price', true );
 $full_address = HCQB_Submission::format_address( $data );
 $admin_url    = admin_url( 'post.php?post=' . $post_id . '&action=edit' );
 $submitted_at = current_time( 'F j, Y \a\t g:i a' );
@@ -37,7 +35,6 @@ Address:  <?php echo $full_address . "\n"; ?>
 <?php echo str_repeat( '-', 52 ) . "\n"; ?>
 
 QUOTE SUMMARY
-Product:  <?php echo $product_name . "\n"; ?>
 
 Selected Options:
 <?php foreach ( $data['selected_options'] as $opt ) :

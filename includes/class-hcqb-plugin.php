@@ -124,7 +124,8 @@ class HCQB_Plugin {
 			// WordPress adds its default boxes at priority 10.
 			add_action( 'add_meta_boxes',        [ HCQB_Metabox_Submission::class,     'register'              ], 11 );
 			add_action( 'admin_enqueue_scripts', [ HCQB_Admin_Assets::class,           'enqueue_for_submissions' ] );
-			add_action( 'wp_ajax_hcqb_update_submission_status', [ HCQB_Ajax::class,   'handle_update_status'  ] );
+			add_action( 'wp_ajax_hcqb_update_submission_status', [ HCQB_Ajax::class,          'handle_update_status' ] );
+			add_action( 'wp_ajax_hcqb_import_json',              [ HCQB_Metabox_Config::class, 'handle_import_json'   ] );
 			add_filter( 'manage_hc-quote-submissions_posts_columns',       [ HCQB_List_Table_Submissions::class, 'columns'        ] );
 			add_action( 'manage_hc-quote-submissions_posts_custom_column', [ HCQB_List_Table_Submissions::class, 'column_content' ], 10, 2 );
 			add_action( 'restrict_manage_posts', [ HCQB_List_Table_Submissions::class, 'status_filter'         ] );

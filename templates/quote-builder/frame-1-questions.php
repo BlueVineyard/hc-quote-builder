@@ -29,35 +29,6 @@ $partial_map = [
 ?>
 <div class="hcqb-builder-questions">
 
-	<?php if ( ! ( $standalone ?? false ) ) : ?>
-	<?php // ----------------------------------------------------------------
-	// Product selector — hidden in standalone mode (no pre-selected product)
-	// --------------------------------------------------------------- ?>
-	<div class="hcqb-product-selector">
-		<div class="hcqb-product-selector__current">
-			<div class="hcqb-product-selector__info">
-				<span class="hcqb-product-selector__label">Configuring</span>
-				<span class="hcqb-product-selector__name"><?php echo esc_html( $product->post_title ); ?></span>
-			</div>
-			<button type="button" class="hcqb-btn hcqb-btn--ghost hcqb-change-product">
-				Change
-			</button>
-		</div>
-
-		<div class="hcqb-product-selector__dropdown" id="hcqb-product-dropdown" hidden>
-			<label for="hcqb-product-select" class="screen-reader-text">Select a different product</label>
-			<select id="hcqb-product-select" class="hcqb-product-select">
-				<?php foreach ( $available_products as $p ) : ?>
-				<option value="<?php echo esc_attr( $p['id'] ); ?>"
-				        <?php selected( $p['id'], $product_id ); ?>>
-					<?php echo esc_html( $p['name'] ); ?>
-				</option>
-				<?php endforeach; ?>
-			</select>
-		</div>
-	</div><!-- .hcqb-product-selector -->
-	<?php endif; ?>
-
 	<?php // ----------------------------------------------------------------
 	// Questions list
 	// --------------------------------------------------------------- ?>
@@ -92,10 +63,17 @@ $partial_map = [
 		?>
 		<div class="hcqb-question<?php echo $is_cond ? ' hcqb-question--conditional' : ''; ?>"
 		     data-question-key="<?php echo esc_attr( $q_key ); ?>"
-		     <?php if ( $is_cond ) : ?>
+		     <?php if ( $is_cond ) :
+		     $multi_conds = ! empty( $q['show_when_conditions'] ) && is_array( $q['show_when_conditions'] )
+		         ? $q['show_when_conditions'] : [];
+		     ?>
 		     data-conditional="true"
+		     <?php if ( $multi_conds ) : ?>
+		     data-show-when-conditions="<?php echo esc_attr( wp_json_encode( $multi_conds ) ); ?>"
+		     <?php else : ?>
 		     data-show-when-question="<?php echo esc_attr( $q['show_when_question'] ?? '' ); ?>"
 		     data-show-when-option="<?php echo esc_attr( $q['show_when_option']   ?? '' ); ?>"
+		     <?php endif; ?>
 		     aria-hidden="true"
 		     style="display:none"
 		     <?php endif; ?>>

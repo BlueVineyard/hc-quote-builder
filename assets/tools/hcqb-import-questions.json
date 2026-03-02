@@ -1,0 +1,265 @@
+{
+  "questions": [
+    {
+      "label": "Size",
+      "input_type": "dropdown",
+      "required": 1,
+      "helper_text": "",
+      "show_in_pill": 1,
+      "is_conditional": 0,
+      "show_when_question": "",
+      "show_when_option": "",
+      "options": [
+        { "label": "3 x 3",      "price": 7500,  "price_type": "addition", "option_role": "base_price", "affects_image": 0 },
+        { "label": "6 x 3",      "price": 10250, "price_type": "addition", "option_role": "base_price", "affects_image": 0 },
+        { "label": "8 x 3.3",    "price": 12950, "price_type": "addition", "option_role": "base_price", "affects_image": 0 },
+        { "label": "10.4 x 3.3", "price": 17500, "price_type": "addition", "option_role": "base_price", "affects_image": 0 },
+        { "label": "12 x 3",     "price": 18500, "price_type": "addition", "option_role": "base_price", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Assembly",
+      "input_type": "radio",
+      "required": 1,
+      "helper_text": "",
+      "show_in_pill": 1,
+      "is_conditional": 0,
+      "show_when_question": "",
+      "show_when_option": "",
+      "options": [
+        { "label": "Flatpack",  "price": 0,    "price_type": "addition", "option_role": "",         "affects_image": 0 },
+        { "label": "Assembled", "price": 3000, "price_type": "addition", "option_role": "assembly", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Assembly Upgrade 6x3",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "",
+      "show_when_option": "",
+      "show_when_conditions": [
+        { "question": "assembly", "option": "assembled" },
+        { "question": "size",     "option": "6_x_3" }
+      ],
+      "options": [
+        { "label": "6 x 3 Assembly Upgrade", "price": 750, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Assembly Upgrade 8x3.3",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "",
+      "show_when_option": "",
+      "show_when_conditions": [
+        { "question": "assembly", "option": "assembled" },
+        { "question": "size",     "option": "8_x_3_3" }
+      ],
+      "options": [
+        { "label": "8 x 3.3 Assembly Upgrade", "price": 1750, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Assembly Upgrade 10.4x3.3",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "",
+      "show_when_option": "",
+      "show_when_conditions": [
+        { "question": "assembly", "option": "assembled" },
+        { "question": "size",     "option": "10_4_x_3_3" }
+      ],
+      "options": [
+        { "label": "10.4 x 3.3 Assembly Upgrade", "price": 3000, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Assembly Upgrade 12x3",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "",
+      "show_when_option": "",
+      "show_when_conditions": [
+        { "question": "assembly", "option": "assembled" },
+        { "question": "size",     "option": "12_x_3" }
+      ],
+      "options": [
+        { "label": "12 x 3 Assembly Upgrade", "price": 3000, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Sliding Door",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "Available for 3 x 3 containers only.",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "size",
+      "show_when_option": "3_x_3",
+      "options": [
+        { "label": "No",  "price": 0,    "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "Yes", "price": 1750, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Interior Fitout",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "Kitchenette: 2.4m modular kitchen, overhead cupboards, stainless sink. Benchtop: 1.8m benchtop with cupboards and stainless sink.",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "assembly",
+      "show_when_option": "assembled",
+      "options": [
+        { "label": "None",              "price": 0,    "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "Kitchenette",       "price": 3400, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "Benchtop and Sink", "price": 2200, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Electrical Package",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "BASE electrical includes 2 x Power Points, 1 x Light, Inlet and Circuit board.",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "assembly",
+      "show_when_option": "assembled",
+      "options": [
+        { "label": "No Electrical",   "price": 0,    "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "With Electrical", "price": 1750, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Extra Power Points",
+      "input_type": "dropdown",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "electrical_package",
+      "show_when_option": "with_electrical",
+      "options": [
+        { "label": "None",    "price": 0,   "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "1 Extra", "price": 140, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "2 Extra", "price": 280, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "3 Extra", "price": 420, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "4 Extra", "price": 560, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "5 Extra", "price": 700, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "6 Extra", "price": 840, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Extra Lights",
+      "input_type": "dropdown",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "electrical_package",
+      "show_when_option": "with_electrical",
+      "options": [
+        { "label": "None",    "price": 0,    "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "1 Extra", "price": 240,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "2 Extra", "price": 480,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "3 Extra", "price": 720,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "4 Extra", "price": 960,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "5 Extra", "price": 1200, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "6 Extra", "price": 1440, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "External 10A Power Points",
+      "input_type": "dropdown",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "electrical_package",
+      "show_when_option": "with_electrical",
+      "options": [
+        { "label": "None",    "price": 0,    "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "1 Extra", "price": 215,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "2 Extra", "price": 430,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "3 Extra", "price": 645,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "4 Extra", "price": 860,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "5 Extra", "price": 1075, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "6 Extra", "price": 1290, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Data Ports",
+      "input_type": "dropdown",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "electrical_package",
+      "show_when_option": "with_electrical",
+      "options": [
+        { "label": "None",    "price": 0,    "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "1 Extra", "price": 250,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "2 Extra", "price": 500,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "3 Extra", "price": 750,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "4 Extra", "price": 1000, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "5 Extra", "price": 1250, "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "6 Extra", "price": 1500, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "15A Caravan Plug",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "Allows power to be supplied by extension cord.",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "electrical_package",
+      "show_when_option": "with_electrical",
+      "options": [
+        { "label": "No",  "price": 0,   "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "Yes", "price": 380, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Generator Switch",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "Needed if you intend to power the building with a generator.",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "electrical_package",
+      "show_when_option": "with_electrical",
+      "options": [
+        { "label": "No",  "price": 0,   "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "Yes", "price": 585, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    },
+    {
+      "label": "Air Conditioning",
+      "input_type": "radio",
+      "required": 0,
+      "helper_text": "",
+      "show_in_pill": 0,
+      "is_conditional": 1,
+      "show_when_question": "electrical_package",
+      "show_when_option": "with_electrical",
+      "options": [
+        { "label": "No A/C",    "price": 0,    "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "1.6kW A/C", "price": 850,  "price_type": "addition", "option_role": "", "affects_image": 0 },
+        { "label": "2.2kW A/C", "price": 1100, "price_type": "addition", "option_role": "", "affects_image": 0 }
+      ]
+    }
+  ]
+}

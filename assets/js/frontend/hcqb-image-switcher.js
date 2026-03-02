@@ -78,9 +78,12 @@
 		// Return the best-matching rule or null.
 		// Expects rules pre-sorted by match_tags.length DESC (from PHP).
 		findMatchingRule: function ( activeTags, rules ) {
+			// Rules are pre-sorted by PHP (most match_tags first).
+			// Full match: all tags active — first full match wins (most specific due to pre-sort).
+			// Partial match: compare percentage matched; on tie prefer fewest total tags (closest to satisfied).
 			var bestFullMatch  = null;
 			var bestPartial    = null;
-			var bestPartialCnt = 0;
+			var bestPartialPct = 0;
 
 			for ( var i = 0; i < rules.length; i++ ) {
 				var rule       = rules[ i ];
@@ -92,14 +95,18 @@
 					}
 				}
 
-				var isFullMatch = matchCount > 0 && matchCount === rule.match_tags.length;
+				if ( matchCount === 0 ) { continue; }
 
-				if ( isFullMatch ) {
-					// Rules are pre-sorted — first full match is most specific, wins.
+				var pct = matchCount / rule.match_tags.length;
+
+				if ( pct === 1 ) {
 					if ( ! bestFullMatch ) { bestFullMatch = rule; }
-				} else if ( matchCount > bestPartialCnt ) {
+				} else if (
+					pct > bestPartialPct ||
+					( pct === bestPartialPct && bestPartial && rule.match_tags.length < bestPartial.match_tags.length )
+				) {
 					bestPartial    = rule;
-					bestPartialCnt = matchCount;
+					bestPartialPct = pct;
 				}
 			}
 

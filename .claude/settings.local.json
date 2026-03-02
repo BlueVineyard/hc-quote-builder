@@ -31,14 +31,16 @@
       "Bash(__NEW_LINE_def77ab7bb5d5149__ cp \"$GIT/includes/class-hcqb-helpers.php\" \"$WP/includes/class-hcqb-helpers.php\")",
       "Bash(__NEW_LINE_def77ab7bb5d5149__ echo \"Synced\")",
       "Bash(python wrap_fields.py)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Read(//d/Downloads/**)"
     ],
     "additionalDirectories": [
       "d:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$REPO\\includes",
       "D:\\Dev Resources\\Dev Enviroment\\Local SItes\\hc-quote-builder\\app\\public\\wp-content\\plugins\\hc-quote-builder",
       "D:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$SRC",
       "D:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$REPO\\assets\\js\\admin",
-      "d:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$SRC\\includes"
+      "d:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$SRC\\includes",
+      "D:\\Blue Vineyard\\Github - BV\\hc-quote-builder\\$REPO\\admin"
     ]
   }
 }

@@ -32,6 +32,7 @@ foreach ( $q['options'] ?? [] as $opt ) :
 	       value="<?php echo esc_attr( $o_slug ); ?>"
 	       data-price="<?php echo esc_attr( $o_price ); ?>"
 	       data-price-type="<?php echo esc_attr( $o_price_type ); ?>"
+	       data-option-role="<?php echo esc_attr( $opt['option_role'] ?? '' ); ?>"
 	       data-affects-image="<?php echo esc_attr( $o_affects ); ?>">
 	<span class="hcqb-radio-option__label"><?php echo esc_html( $o_label ); ?></span>
 	<?php if ( $o_price > 0 ) : ?>

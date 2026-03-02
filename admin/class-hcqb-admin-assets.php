@@ -93,6 +93,12 @@ class HCQB_Admin_Assets {
 			HCQB_VERSION,
 			true
 		);
+
+		wp_localize_script( 'hcqb-admin-config', 'HCQBAdminConfig', [
+			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+			'postId'      => (string) get_the_ID(),
+			'importNonce' => wp_create_nonce( 'hcqb_import_json' ),
+		] );
 	}
 
 	// -------------------------------------------------------------------------

@@ -602,8 +602,7 @@ class HCQB_Shortcodes {
 		}
 		$config = hcqb_get_active_config_for_product( $post_id );
 		$hidden = $config ? '' : ' hcqb-btn--hidden';
-		$url    = add_query_arg( 'product', $post_id, $page_url );
-		return '<a href="' . esc_url( $url ) . '" class="hcqb-btn hcqb-btn--quote' . esc_attr( $hidden ) . '">'
+		return '<a href="' . esc_url( $page_url ) . '" class="hcqb-btn hcqb-btn--quote' . esc_attr( $hidden ) . '">'
 			. esc_html( $atts['label'] ) . '</a>';
 	}
 
@@ -633,8 +632,7 @@ class HCQB_Shortcodes {
 		$label  = $atts['label'] ?: ( get_post_meta( $post_id, 'hcqb_enquiry_button_label', true ) ?: 'Enquire Now' );
 		$config = hcqb_get_active_config_for_product( $post_id );
 		$hidden = $config ? '' : ' hcqb-btn--hidden';
-		$url    = add_query_arg( [ 'product' => $post_id, 'view' => 'lease' ], $page_url );
-		return '<a href="' . esc_url( $url ) . '" class="hcqb-btn hcqb-btn--enquire' . esc_attr( $hidden ) . '">'
+		return '<a href="' . esc_url( $page_url ) . '" class="hcqb-btn hcqb-btn--enquire' . esc_attr( $hidden ) . '">'
 			. esc_html( $label ) . '</a>';
 	}
 
@@ -699,153 +697,37 @@ class HCQB_Shortcodes {
 	// =========================================================================
 
 	/**
-	 * Render Frame 1 of the quote builder (questions + live preview).
+	 * Render the quote builder.
 	 *
-	 * Reads ?product= from the URL and validates the product and config before
-	 * rendering. Returns a styled error card for any of four error conditions:
-	 *   no_product  — ?product= absent or zero
-	 *   not_found   — post ID invalid, wrong type, or not published
-	 *   no_config   — product exists but has no active config
-	 *
-	 * The full config data is output as window.HCQBConfig before the HTML so
-	 * all JS modules can access it without any AJAX round-trips.
+	 * Loads the global default config from Settings → Quote Builder and renders
+	 * the builder with no product context. The config holds all questions,
+	 * image rules, and pricing — fully independent of hc-containers products.
 	 *
 	 * @param array|string $atts Shortcode attributes (none currently used).
 	 * @return string  HTML output.
 	 */
 	public static function sc_quote_builder( array|string $atts ): string {
-		$product_id = absint( $_GET['product'] ?? 0 );
-
-		// Product-specific mode — existing flow.
-		if ( $product_id ) {
-			$product = get_post( $product_id );
-			if ( ! $product || 'hc-containers' !== $product->post_type || 'publish' !== $product->post_status ) {
-				return self::render_builder_error( 'not_found' );
-			}
-			$config = hcqb_get_active_config_for_product( $product_id );
-			if ( ! $config ) {
-				return self::render_builder_error( 'no_config', $product );
-			}
-			return self::render_builder_frame_1( $product, $config );
-		}
-
-		// Standalone mode — render using the global default config, no product required.
 		$config_id = absint( hcqb_get_setting( 'default_config_id' ) );
-		if ( $config_id ) {
-			$config = get_post( $config_id );
-			if ( $config && 'hc-quote-configs' === $config->post_type && 'publish' === $config->post_status ) {
-				return self::render_builder_standalone( $config );
-			}
+		if ( ! $config_id ) {
+			return self::render_builder_error();
 		}
-
-		return self::render_builder_error( 'no_product' );
+		$config = get_post( $config_id );
+		if ( ! $config || 'hc-quote-configs' !== $config->post_type || 'publish' !== $config->post_status ) {
+			return self::render_builder_error();
+		}
+		return self::render_builder( $config );
 	}
 
 	// -------------------------------------------------------------------------
-	// Builder — Frame 1 renderer
+	// Builder renderer
 	// -------------------------------------------------------------------------
 
-	private static function render_builder_frame_1( WP_Post $product, WP_Post $config ): string {
-		$product_id = $product->ID;
-		$questions  = get_post_meta( $config->ID, 'hcqb_questions', true ) ?: [];
-		$image_rules = get_post_meta( $config->ID, 'hcqb_image_rules', true ) ?: [];
-
-		// Default image — first gallery image or featured image.
-		$gallery_ids = array_filter( array_map( 'absint', (array) ( get_post_meta( $product_id, 'hcqb_product_images', true ) ?: [] ) ) );
-		if ( empty( $gallery_ids ) ) {
-			$thumb_id    = (int) get_post_thumbnail_id( $product_id );
-			$gallery_ids = $thumb_id ? [ $thumb_id ] : [];
-		}
-		$default_image_url = ! empty( $gallery_ids )
-			? ( wp_get_attachment_image_url( reset( $gallery_ids ), 'large' ) ?: '' )
-			: '';
-
-		// Process image rules — attach URLs, sort most-specific-first.
-		foreach ( $image_rules as &$rule ) {
-			$rule['image_url'] = wp_get_attachment_url( $rule['attachment_id'] ?? 0 ) ?: '';
-		}
-		unset( $rule );
-		usort( $image_rules, fn( $a, $b ) => count( $b['match_tags'] ) <=> count( $a['match_tags'] ) );
-
-		// Available products list — used for the Change Product flow.
-		$all_containers = get_posts( [
-			'post_type'      => 'hc-containers',
-			'post_status'    => 'publish',
-			'numberposts'    => -1,
-			'orderby'        => 'title',
-			'order'          => 'ASC',
-			'no_found_rows'  => true,
-		] );
-		$available_products = array_map(
-			fn( WP_Post $p ) => [ 'id' => $p->ID, 'name' => $p->post_title ],
-			$all_containers
-		);
-
-		// Feature pill questions — max 4, in admin order.
-		$pill_questions = array_slice(
-			array_values( array_filter( $questions, fn( $q ) => ! empty( $q['show_in_pill'] ) ) ),
-			0, 4
-		);
-
-		$base_price = (float) get_post_meta( $product_id, 'hcqb_product_price', true );
-
-		// Frame 2 — variables passed into frame-2-contact.php.
-		$prefix_options      = (array) ( hcqb_get_setting( 'prefix_options' )      ?: [ 'Mr', 'Mrs', 'Ms', 'Dr' ] );
-		$supported_countries = (array) ( hcqb_get_setting( 'supported_countries' ) ?: [ 'AU' ] );
-		$submit_button_label = hcqb_get_setting( 'submit_button_label' ) ?: 'Submit Quote Request';
-		$consent_text        = hcqb_get_setting( 'consent_text' )        ?: 'I agree to be contacted regarding this quote request.';
-		$privacy_fine_print  = hcqb_get_setting( 'privacy_fine_print' )  ?: '';
-		$form_layout         = hcqb_get_setting( 'quote_form_layout' )   ?: 'multistep';
-
-		// JSON config block for JS modules.
-		$config_data = [
-			'productId'         => $product_id,
-			'productName'       => $product->post_title,
-			'basePrice'         => $base_price,
-			'questions'         => $questions,
-			'imageRules'        => $image_rules,
-			'defaultImageUrl'   => $default_image_url,
-			'availableProducts' => $available_products,
-			'pillQuestions'     => array_map( fn( $q ) => $q['key'], $pill_questions ),
-			'formLayout'        => $form_layout,
-		];
-
-		$standalone    = false;
-		$product_title = $product->post_title;
-
-		ob_start();
-		echo '<script>window.HCQBConfig = ' . wp_json_encode( $config_data ) . ';</script>' . "\n";
-		?>
-		<div class="hcqb-quote-builder" id="hcqb-builder"
-		     data-product-id="<?php echo esc_attr( $product_id ); ?>"
-		     data-form-layout="<?php echo esc_attr( $form_layout ); ?>">
-			<div class="hcqb-builder-layout" id="hcqb-frame-1">
-				<?php
-				include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-1-questions.php';
-				include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-1-preview.php';
-				?>
-			</div><!-- .hcqb-builder-layout #hcqb-frame-1 -->
-			<?php include HCQB_PLUGIN_DIR . 'templates/quote-builder/frame-2-contact.php'; ?>
-		</div><!-- .hcqb-quote-builder -->
-		<?php
-		return ob_get_clean();
-	}
-
-	// -------------------------------------------------------------------------
-	// Builder — standalone renderer (no product required)
-	// -------------------------------------------------------------------------
-
-	private static function render_builder_standalone( WP_Post $config ): string {
-		$product       = null;
-		$product_id    = 0;
-		$product_title = '';
-		$standalone    = true;
-
-		$questions   = get_post_meta( $config->ID, 'hcqb_questions',   true ) ?: [];
-		$image_rules = get_post_meta( $config->ID, 'hcqb_image_rules', true ) ?: [];
+	private static function render_builder( WP_Post $config ): string {
+		$questions   = get_post_meta( $config->ID, 'hcqb_questions',        true ) ?: [];
+		$image_rules = get_post_meta( $config->ID, 'hcqb_image_rules',      true ) ?: [];
 		$base_price  = (float) get_post_meta( $config->ID, 'hcqb_base_price', true );
 
-		// Default image from the config's own meta.
+		// Default image from config meta.
 		$default_image_id  = absint( get_post_meta( $config->ID, 'hcqb_default_image_id', true ) );
 		$default_image_url = $default_image_id
 			? ( wp_get_attachment_image_url( $default_image_id, 'large' ) ?: '' )
@@ -858,16 +740,13 @@ class HCQB_Shortcodes {
 		unset( $rule );
 		usort( $image_rules, fn( $a, $b ) => count( $b['match_tags'] ) <=> count( $a['match_tags'] ) );
 
-		// No available products in standalone mode — the product selector is hidden.
-		$available_products = [];
-
-		// Feature pill questions.
+		// Feature pill questions — max 4, in admin order.
 		$pill_questions = array_slice(
 			array_values( array_filter( $questions, fn( $q ) => ! empty( $q['show_in_pill'] ) ) ),
 			0, 4
 		);
 
-		// Frame 2 variables — same as render_builder_frame_1.
+		// Frame 2 — variables passed into frame-2-contact.php.
 		$prefix_options      = (array) ( hcqb_get_setting( 'prefix_options' )      ?: [ 'Mr', 'Mrs', 'Ms', 'Dr' ] );
 		$supported_countries = (array) ( hcqb_get_setting( 'supported_countries' ) ?: [ 'AU' ] );
 		$submit_button_label = hcqb_get_setting( 'submit_button_label' ) ?: 'Submit Quote Request';
@@ -877,23 +756,18 @@ class HCQB_Shortcodes {
 
 		// JSON config block for JS modules.
 		$config_data = [
-			'productId'         => 0,
-			'productName'       => '',
-			'basePrice'         => $base_price,
-			'questions'         => $questions,
-			'imageRules'        => $image_rules,
-			'defaultImageUrl'   => $default_image_url,
-			'availableProducts' => [],
-			'pillQuestions'     => array_map( fn( $q ) => $q['key'], $pill_questions ),
-			'formLayout'        => $form_layout,
-			'standalone'        => true,
+			'basePrice'       => $base_price,
+			'questions'       => $questions,
+			'imageRules'      => $image_rules,
+			'defaultImageUrl' => $default_image_url,
+			'pillQuestions'   => array_map( fn( $q ) => $q['key'], $pill_questions ),
+			'formLayout'      => $form_layout,
 		];
 
 		ob_start();
 		echo '<script>window.HCQBConfig = ' . wp_json_encode( $config_data ) . ';</script>' . "\n";
 		?>
 		<div class="hcqb-quote-builder" id="hcqb-builder"
-		     data-product-id="0"
 		     data-form-layout="<?php echo esc_attr( $form_layout ); ?>">
 			<div class="hcqb-builder-layout" id="hcqb-frame-1">
 				<?php
@@ -908,34 +782,17 @@ class HCQB_Shortcodes {
 	}
 
 	// -------------------------------------------------------------------------
-	// Builder — error card renderer
+	// Builder — error card (no config configured in settings)
 	// -------------------------------------------------------------------------
 
-	private static function render_builder_error( string $type, ?WP_Post $product = null ): string {
-		$headings = [
-			'no_product' => 'No Product Selected',
-			'not_found'  => 'Product Not Found',
-			'no_config'  => 'Quote Unavailable',
-		];
-		$messages = [
-			'no_product' => 'Please select a product to get a quote.',
-			'not_found'  => 'The requested product could not be found.',
-			'no_config'  => 'The quote builder is not currently available for this product.',
-		];
-
-		$heading  = $headings[ $type ] ?? $headings['not_found'];
-		$message  = $messages[ $type ] ?? $messages['not_found'];
-		$back_url = $product ? get_permalink( $product->ID ) : home_url( '/' );
-		$back_label = $product ? '← Back to Product' : '← Back to Home';
-
+	private static function render_builder_error(): string {
 		ob_start();
 		?>
 		<div class="hcqb-builder-error">
-			<h2 class="hcqb-builder-error__heading"><?php echo esc_html( $heading ); ?></h2>
-			<p  class="hcqb-builder-error__message"><?php echo esc_html( $message ); ?></p>
-			<a  class="hcqb-btn hcqb-btn--secondary"
-				href="<?php echo esc_url( $back_url ); ?>">
-				<?php echo esc_html( $back_label ); ?>
+			<h2 class="hcqb-builder-error__heading">Quote Not Configured</h2>
+			<p  class="hcqb-builder-error__message">The quote builder has not been set up yet. Please check Settings &rarr; Quote Builder.</p>
+			<a  class="hcqb-btn hcqb-btn--secondary" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+				&larr; Back to Home
 			</a>
 		</div>
 		<?php

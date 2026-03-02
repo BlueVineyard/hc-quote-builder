@@ -91,10 +91,16 @@
 		}
 
 		// Label → live preview update + slug auto-fill on first blur.
-		var labelInput = row.querySelector( '.hcqb-question-label-input' );
-		var keyHidden  = row.querySelector( '.hcqb-key-hidden' );
-		var preview    = row.querySelector( '.hcqb-question-label-preview' );
-		var slugDisplay = row.querySelector( ':scope > .hcqb-question-header > .hcqb-slug-locked' );
+		var labelInput   = row.querySelector( '.hcqb-question-label-input' );
+		var keyHidden    = row.querySelector( '.hcqb-key-hidden' );
+		var keyEditInput = row.querySelector( '.hcqb-key-edit-input' );
+		var preview      = row.querySelector( '.hcqb-question-label-preview' );
+		var slugDisplay  = row.querySelector( ':scope > .hcqb-question-header > .hcqb-slug-locked' );
+
+		// Pre-fill key edit input from saved hidden value (PHP-rendered rows).
+		if ( keyEditInput && keyHidden && keyHidden.value ) {
+			keyEditInput.value = keyHidden.value;
+		}
 
 		if ( labelInput ) {
 			labelInput.addEventListener( 'input', function () {
@@ -106,7 +112,19 @@
 					var generated = slugify( this.value );
 					keyHidden.value = generated;
 					if ( slugDisplay ) slugDisplay.textContent = generated;
+					if ( keyEditInput ) keyEditInput.value = generated;
 				}
+			} );
+		}
+
+		// Key edit input: slugify on blur, sync hidden + header span, refresh dropdowns.
+		if ( keyEditInput ) {
+			keyEditInput.addEventListener( 'blur', function () {
+				var slug = slugify( this.value );
+				this.value = slug;
+				if ( keyHidden ) keyHidden.value = slug;
+				if ( slugDisplay ) slugDisplay.textContent = slug || 'auto';
+				refreshConditionalDropdowns();
 			} );
 		}
 
@@ -121,11 +139,16 @@
 			} );
 		}
 
-		// show_when_question change → rebuild show_when_option.
-		var swqSelect = row.querySelector( '.hcqb-show-when-question' );
-		if ( swqSelect ) {
-			swqSelect.addEventListener( 'change', function () {
-				refreshConditionalOptions( row );
+		// Initialize existing condition rows.
+		row.querySelectorAll( '.hcqb-condition-row' ).forEach( function ( condRow ) {
+			initConditionRow( condRow, row );
+		} );
+
+		// "Add Condition" button.
+		var addCondBtn = row.querySelector( '.hcqb-add-condition' );
+		if ( addCondBtn ) {
+			addCondBtn.addEventListener( 'click', function () {
+				addCondition( row );
 			} );
 		}
 
@@ -198,6 +221,9 @@
 				'<table class="form-table hcqb-meta-table hcqb-question-table">' +
 					'<tr><th><label>Label</label></th>' +
 					'<td><input type="text" name="' + escAttr( b ) + '[label]" value="" class="regular-text hcqb-question-label-input" placeholder="Question label"></td></tr>' +
+					'<tr><th><label>Key</label></th>' +
+					'<td><input type="text" value="" class="regular-text hcqb-key-edit-input" placeholder="auto-generated from label">' +
+					'<p class="description">Changing the key will break any conditions that reference this question.</p></td></tr>' +
 					'<tr><th><label>Input Type</label></th>' +
 					'<td><select name="' + escAttr( b ) + '[input_type]">' +
 						'<option value="radio">Radio buttons</option>' +
@@ -214,8 +240,12 @@
 					'<td>' +
 						'<label><input type="checkbox" name="' + escAttr( b ) + '[is_conditional]" value="1" class="hcqb-is-conditional-check"> Only show when another question\'s answer is…</label>' +
 						'<div class="hcqb-conditional-fields hcqb-hidden">' +
-							'<select name="' + escAttr( b ) + '[show_when_question]" class="hcqb-show-when-question"><option value="">— Select question —</option></select>' +
-							'<select name="' + escAttr( b ) + '[show_when_option]"   class="hcqb-show-when-option"><option value="">— Select option —</option></select>' +
+							'<div class="hcqb-condition-row">' +
+								'<select name="' + escAttr( b ) + '[show_when_conditions][0][question]" class="hcqb-show-when-question"><option value="">— Select question —</option></select>' +
+								'<select name="' + escAttr( b ) + '[show_when_conditions][0][option]"   class="hcqb-show-when-option"><option value="">— Select option —</option></select>' +
+								'<button type="button" class="button hcqb-remove-condition" style="display:none;">Remove</button>' +
+							'</div>' +
+							'<button type="button" class="button hcqb-add-condition">+ AND Condition</button>' +
 						'</div>' +
 					'</td></tr>' +
 				'</table>' +
@@ -228,6 +258,74 @@
 
 		return row;
 	}
+
+	// =========================================================================
+	// Condition row — init, add, build
+	// =========================================================================
+
+	function initConditionRow( condRow, qRow ) {
+		var swqSelect = condRow.querySelector( '.hcqb-show-when-question' );
+		if ( swqSelect ) {
+			swqSelect.addEventListener( 'change', function () {
+				refreshConditionalOptions( condRow );
+			} );
+		}
+
+		var removeBtn = condRow.querySelector( '.hcqb-remove-condition' );
+		if ( removeBtn ) {
+			removeBtn.addEventListener( 'click', function () {
+				condRow.remove();
+				updateConditionRemoveBtns( qRow );
+			} );
+		}
+	}
+
+	function updateConditionRemoveBtns( qRow ) {
+		var condRows = qRow.querySelectorAll( '.hcqb-condition-row' );
+		condRows.forEach( function ( cr ) {
+			var btn = cr.querySelector( '.hcqb-remove-condition' );
+			if ( btn ) {
+				btn.style.display = condRows.length > 1 ? '' : 'none';
+			}
+		} );
+	}
+
+	function addCondition( qRow ) {
+		var condFields = qRow.querySelector( '.hcqb-conditional-fields' );
+		if ( ! condFields ) { return; }
+
+		// Count existing condition rows for the next index.
+		var cIdx   = condFields.querySelectorAll( '.hcqb-condition-row' ).length;
+
+		// Derive the base name from any named input in the question row.
+		var anyInput  = qRow.querySelector( '[name^="hcqb_questions["]' );
+		if ( ! anyInput ) { return; }
+		var baseMatch = anyInput.name.match( /^(hcqb_questions\[\d+\])/ );
+		if ( ! baseMatch ) { return; }
+		var base = baseMatch[ 1 ];
+
+		var condRow = buildConditionRow( base, cIdx );
+		var addBtn  = condFields.querySelector( '.hcqb-add-condition' );
+		condFields.insertBefore( condRow, addBtn );
+		initConditionRow( condRow, qRow );
+		refreshConditionalDropdowns();
+		updateConditionRemoveBtns( qRow );
+	}
+
+	function buildConditionRow( base, cIdx ) {
+		var row = document.createElement( 'div' );
+		row.className = 'hcqb-condition-row';
+		row.innerHTML =
+			'<select name="' + escAttr( base ) + '[show_when_conditions][' + cIdx + '][question]" class="hcqb-show-when-question">' +
+				'<option value="">— Select question —</option>' +
+			'</select>' +
+			'<select name="' + escAttr( base ) + '[show_when_conditions][' + cIdx + '][option]" class="hcqb-show-when-option">' +
+				'<option value="">— Select option —</option>' +
+			'</select>' +
+			'<button type="button" class="button hcqb-remove-condition">Remove</button>';
+		return row;
+	}
+
 
 	// =========================================================================
 	// Option row — init
@@ -249,13 +347,28 @@
 		var slugHidden  = oRow.querySelector( '.hcqb-option-slug-hidden' );
 		var slugDisplay = oRow.querySelector( '.hcqb-option-slug-display' );
 
+		// Pre-fill editable slug input from saved hidden value (PHP-rendered rows).
+		if ( slugDisplay && slugHidden && slugHidden.value ) {
+			slugDisplay.value = slugHidden.value;
+		}
+
 		if ( labelInput ) {
 			labelInput.addEventListener( 'blur', function () {
 				if ( slugHidden && ! slugHidden.value && this.value ) {
 					var generated = slugify( this.value );
 					slugHidden.value = generated;
-					if ( slugDisplay ) slugDisplay.textContent = generated;
+					if ( slugDisplay ) slugDisplay.value = generated;
 				}
+				rebuildImageTagSelects();
+			} );
+		}
+
+		// Slug edit input blur → slugify → sync to hidden + rebuild image tags.
+		if ( slugDisplay ) {
+			slugDisplay.addEventListener( 'blur', function () {
+				var slug = slugify( this.value );
+				this.value = slug;
+				if ( slugHidden ) slugHidden.value = slug;
 				rebuildImageTagSelects();
 			} );
 		}
@@ -315,7 +428,7 @@
 			'<input type="hidden" name="' + escAttr( b ) + '[_uid]" value="' + escAttr( uid ) + '">' +
 			'<input type="hidden" name="' + escAttr( b ) + '[slug]" value="" class="hcqb-option-slug-hidden">' +
 			'<input type="text" name="' + escAttr( b ) + '[label]" value="" class="regular-text hcqb-option-label-input" placeholder="Option label">' +
-			'<span class="hcqb-slug-locked hcqb-option-slug-display" title="Option slug — immutable after first save"><em>auto</em></span>' +
+			'<input type="text" value="" class="hcqb-option-slug-edit hcqb-option-slug-display" placeholder="auto">' +
 			'<span class="hcqb-extras-unit">$</span>' +
 			'<input type="number" name="' + escAttr( b ) + '[price]" value="0" class="small-text" step="0.01" min="0" placeholder="0.00">' +
 			'<select name="' + escAttr( b ) + '[price_type]" class="hcqb-price-type">' +
@@ -324,6 +437,7 @@
 			'</select>' +
 			'<select name="' + escAttr( b ) + '[option_role]" class="hcqb-option-role">' +
 				'<option value="standard">Standard</option>' +
+				'<option value="base_price">Base Price</option>' +
 				'<option value="assembly">Assembly</option>' +
 			'</select>' +
 			'<label class="hcqb-affects-image-label" title="Affects product image display">' +
@@ -383,41 +497,43 @@
 			}
 		} );
 
-		// For each question, rebuild its show_when_question select.
+		// For each question, rebuild all its condition row selects.
 		document.querySelectorAll( '#hcqb-questions-list > .hcqb-question-row' ).forEach( function ( qRow ) {
-			var swqSelect = qRow.querySelector( '.hcqb-show-when-question' );
-			if ( ! swqSelect ) return;
+			qRow.querySelectorAll( '.hcqb-condition-row' ).forEach( function ( condRow ) {
+				var swqSelect = condRow.querySelector( '.hcqb-show-when-question' );
+				if ( ! swqSelect ) return;
 
-			var savedVal = swqSelect.value;
-			swqSelect.innerHTML = '<option value="">— Select question —</option>';
+				var savedVal = swqSelect.value;
+				swqSelect.innerHTML = '<option value="">— Select question —</option>';
 
-			questionData.forEach( function ( qd ) {
-				if ( qd.uid === qRow.dataset.uid ) return; // exclude self
-				var opt       = document.createElement( 'option' );
-				opt.value     = qd.key;
-				opt.textContent = qd.label;
-				if ( qd.key && qd.key === savedVal ) opt.selected = true;
-				swqSelect.appendChild( opt );
+				questionData.forEach( function ( qd ) {
+					if ( qd.uid === qRow.dataset.uid ) return; // exclude self
+					var opt         = document.createElement( 'option' );
+					opt.value       = qd.key;
+					opt.textContent = qd.label;
+					if ( qd.key && qd.key === savedVal ) opt.selected = true;
+					swqSelect.appendChild( opt );
+				} );
+
+				// Refresh the option select based on current question selection.
+				if ( swqSelect.value ) {
+					refreshConditionalOptions( condRow );
+				}
 			} );
-
-			// Refresh the option select based on current question selection.
-			if ( swqSelect.value ) {
-				refreshConditionalOptions( qRow );
-			}
 		} );
 	}
 
 	/**
 	 * Populate the show_when_option select based on the currently selected
-	 * show_when_question value within a conditional question row.
+	 * show_when_question value within a single condition row.
 	 */
-	function refreshConditionalOptions( condQRow ) {
-		var swqSelect = condQRow.querySelector( '.hcqb-show-when-question' );
-		var swoSelect = condQRow.querySelector( '.hcqb-show-when-option' );
+	function refreshConditionalOptions( condRow ) {
+		var swqSelect = condRow.querySelector( '.hcqb-show-when-question' );
+		var swoSelect = condRow.querySelector( '.hcqb-show-when-option' );
 		if ( ! swqSelect || ! swoSelect ) return;
 
-		var targetKey    = swqSelect.value;
-		var savedOptVal  = swoSelect.value;
+		var targetKey   = swqSelect.value;
+		var savedOptVal = swoSelect.value;
 		swoSelect.innerHTML = '<option value="">— Select option —</option>';
 		if ( ! targetKey ) return;
 
@@ -438,9 +554,9 @@
 			var label = labelInput.value || slug;
 			if ( ! slug && ! label ) return;
 
-			var displayVal = slug || slugify( label );
-			var opt        = document.createElement( 'option' );
-			opt.value      = displayVal;
+			var displayVal  = slug || slugify( label );
+			var opt         = document.createElement( 'option' );
+			opt.value       = displayVal;
 			opt.textContent = label || displayVal;
 			if ( displayVal === savedOptVal ) opt.selected = true;
 			swoSelect.appendChild( opt );
@@ -453,18 +569,20 @@
 	 */
 	function restoreConditionalValues() {
 		document.querySelectorAll( '#hcqb-questions-list > .hcqb-question-row' ).forEach( function ( qRow ) {
-			var initSwQ = qRow.querySelector( '.hcqb-init-sw-q' );
-			var initSwO = qRow.querySelector( '.hcqb-init-sw-o' );
-			var swqSelect = qRow.querySelector( '.hcqb-show-when-question' );
-			var swoSelect = qRow.querySelector( '.hcqb-show-when-option' );
+			qRow.querySelectorAll( '.hcqb-condition-row' ).forEach( function ( condRow ) {
+				var initSwQ   = condRow.querySelector( '.hcqb-init-sw-q' );
+				var initSwO   = condRow.querySelector( '.hcqb-init-sw-o' );
+				var swqSelect = condRow.querySelector( '.hcqb-show-when-question' );
+				var swoSelect = condRow.querySelector( '.hcqb-show-when-option' );
 
-			if ( initSwQ && swqSelect && initSwQ.value ) {
-				swqSelect.value = initSwQ.value;
-				refreshConditionalOptions( qRow );
-			}
-			if ( initSwO && swoSelect && initSwO.value ) {
-				swoSelect.value = initSwO.value;
-			}
+				if ( initSwQ && swqSelect && initSwQ.value ) {
+					swqSelect.value = initSwQ.value;
+					refreshConditionalOptions( condRow );
+				}
+				if ( initSwO && swoSelect && initSwO.value ) {
+					swoSelect.value = initSwO.value;
+				}
+			} );
 		} );
 	}
 
@@ -937,6 +1055,14 @@
 					el.name = el.name.replace( /\[options\]\[\d+\]/, '[options][' + oIdx + ']' );
 				} );
 			} );
+
+			// Pass 3: reindex the condition index within this question.
+			var condRows = qRow.querySelectorAll( '.hcqb-condition-row' );
+			condRows.forEach( function ( condRow, cIdx ) {
+				condRow.querySelectorAll( '[name]' ).forEach( function ( el ) {
+					el.name = el.name.replace( /\[show_when_conditions\]\[\d+\]/, '[show_when_conditions][' + cIdx + ']' );
+				} );
+			} );
 		} );
 
 		// Image rules.
@@ -1054,6 +1180,48 @@
 				reindexAll();
 			} );
 		}
+
+		// -------------------------------------------------------------------------
+		// Import Questions from JSON
+		// -------------------------------------------------------------------------
+
+		var importBtn    = document.getElementById( 'hcqb-import-json-btn' );
+		var importStatus = document.getElementById( 'hcqb-import-status' );
+
+		if ( importBtn ) {
+			importBtn.addEventListener( 'click', function () {
+				var jsonTextarea = document.getElementById( 'hcqb-import-json' );
+				var json = jsonTextarea ? jsonTextarea.value.trim() : '';
+				if ( ! json ) { return; }
+
+				if ( ! window.confirm( 'This will replace ALL existing questions on this config. Continue?' ) ) {
+					return;
+				}
+
+				importStatus.textContent = 'Importing\u2026';
+
+				var fd = new FormData();
+				fd.append( 'action',  'hcqb_import_json' );
+				fd.append( 'nonce',   HCQBAdminConfig.importNonce );
+				fd.append( 'post_id', HCQBAdminConfig.postId );
+				fd.append( 'json',    json );
+
+				fetch( HCQBAdminConfig.ajaxUrl, { method: 'POST', body: fd } )
+					.then( function ( r ) { return r.json(); } )
+					.then( function ( res ) {
+						if ( res.success ) {
+							importStatus.textContent = res.data.message;
+							setTimeout( function () { window.location.reload(); }, 800 );
+						} else {
+							importStatus.textContent = 'Error: ' + ( ( res.data && res.data.message ) || 'Import failed.' );
+						}
+					} )
+					.catch( function () {
+						importStatus.textContent = 'Network error \u2014 please try again.';
+					} );
+			} );
+		}
+
 	} );
 
 }() );

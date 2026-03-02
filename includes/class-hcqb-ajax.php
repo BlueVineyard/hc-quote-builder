@@ -9,14 +9,13 @@
  * Pipeline:
  *   1. Nonce verification (403 on failure)
  *   2. Honeypot check (silent fake success on match)
- *   3. Product ID validation
- *   4. Active config check
- *   5. Required field validation (server-side)
- *   6. Input sanitisation
- *   7. Post creation
- *   8. Meta persistence (all §15.3 keys)
- *   9. Email dispatch (failures logged, never block save)
- *  10. Success response
+ *   3. Active config check (from global setting)
+ *   4. Required field validation (server-side)
+ *   5. Input sanitisation
+ *   6. Post creation
+ *   7. Meta persistence
+ *   8. Email dispatch (failures logged, never block save)
+ *   9. Success response
  *
  * Delegates data concerns to HCQB_Submission (validate, sanitise, save_meta).
  * Delegates email concerns to HCQB_Email (send_admin_notification, send_customer_copy).
@@ -48,19 +47,17 @@ class HCQB_Ajax {
 			wp_send_json_success( [ 'message' => 'Submission received.' ] );
 		}
 
-		// Step 3 — Product ID.
-		$product_id = absint( $_POST['product_id'] ?? 0 );
-		if ( ! $product_id || get_post_type( $product_id ) !== 'hc-containers' ) {
-			wp_send_json_error( [ 'message' => 'Invalid product.' ] );
+		// Step 3 — Active config from global setting.
+		$config_id = absint( hcqb_get_setting( 'default_config_id' ) );
+		if ( ! $config_id ) {
+			wp_send_json_error( [ 'message' => 'No active quote configuration found.' ] );
 		}
-
-		// Step 4 — Active config.
-		$config = hcqb_get_active_config_for_product( $product_id );
-		if ( ! $config ) {
+		$config = get_post( $config_id );
+		if ( ! $config || 'hc-quote-configs' !== $config->post_type || 'publish' !== $config->post_status ) {
 			wp_send_json_error( [ 'message' => 'No active quote configuration found.' ] );
 		}
 
-		// Step 5 — Required field validation (mirrors client-side).
+		// Step 4 — Required field validation (mirrors client-side).
 		$errors = HCQB_Submission::validate( $_POST );
 		if ( ! empty( $errors ) ) {
 			wp_send_json_error( [
@@ -69,19 +66,19 @@ class HCQB_Ajax {
 			] );
 		}
 
-		// Step 6 — Sanitise all inputs.
-		$data = HCQB_Submission::sanitise_data( $_POST, $product_id );
+		// Step 5 — Sanitise all inputs.
+		$data = HCQB_Submission::sanitise_data( $_POST );
 
-		// Step 7 — Create submission post.
+		// Step 6 — Create submission post.
 		$post_id = wp_insert_post(
 			[
 				'post_type'   => 'hc-quote-submissions',
 				'post_status' => 'publish',
 				'post_title'  => trim(
-					                 $data['prefix'] . ' ' .
-					                 $data['first_name'] . ' ' .
-					                 $data['last_name']
-				                 ) . ' — ' . get_the_title( $product_id ),
+				                 $data['prefix'] . ' ' .
+				                 $data['first_name'] . ' ' .
+				                 $data['last_name']
+				                 ),
 			],
 			true
 		);
@@ -89,12 +86,12 @@ class HCQB_Ajax {
 			wp_send_json_error( [ 'message' => 'Failed to save submission. Please try again.' ] );
 		}
 
-		// Step 8 — Persist all §15.3 meta keys.
-		HCQB_Submission::save_meta( $post_id, $data, $product_id );
+		// Step 7 — Persist all meta keys.
+		HCQB_Submission::save_meta( $post_id, $data );
 
-		// Step 9 — Send emails. Log any failures but never block the save.
-		$admin_sent    = HCQB_Email::send_admin_notification( $post_id, $data, $product_id );
-		$customer_sent = HCQB_Email::send_customer_copy( $post_id, $data, $product_id );
+		// Step 8 — Send emails. Log any failures but never block the save.
+		$admin_sent    = HCQB_Email::send_admin_notification( $post_id, $data );
+		$customer_sent = HCQB_Email::send_customer_copy( $post_id, $data );
 
 		if ( ! $admin_sent || ! $customer_sent ) {
 			update_option( 'hcqb_last_email_error', [
@@ -105,7 +102,7 @@ class HCQB_Ajax {
 			] );
 		}
 
-		// Step 10 — Success.
+		// Step 9 — Success.
 		wp_send_json_success( [
 			'message' => 'Thank you! Your estimate request has been sent. One of our team members will be in touch with you shortly.',
 		] );

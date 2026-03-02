@@ -88,38 +88,6 @@
 	}
 
 	// -------------------------------------------------------------------------
-	// Change product flow — confirmation → dropdown → URL update → reload
-	// -------------------------------------------------------------------------
-
-	function initProductChange() {
-		var changeBtn    = document.querySelector( '.hcqb-change-product' );
-		var dropdownWrap = document.getElementById( 'hcqb-product-dropdown' );
-		var select       = document.getElementById( 'hcqb-product-select' );
-
-		if ( ! changeBtn || ! dropdownWrap || ! select ) { return; }
-
-		changeBtn.addEventListener( 'click', function () {
-			var confirmed = window.confirm(
-				'Changing the product will reset all your current selections. Continue?'
-			);
-			if ( ! confirmed ) { return; }
-
-			changeBtn.hidden      = true;
-			dropdownWrap.hidden   = false;
-			select.focus();
-		} );
-
-		select.addEventListener( 'change', function () {
-			var newId = parseInt( this.value, 10 );
-			if ( ! newId ) { return; }
-
-			var url = new URL( window.location.href );
-			url.searchParams.set( 'product', newId );
-			window.location.href = url.toString();
-		} );
-	}
-
-	// -------------------------------------------------------------------------
 	// Frame navigation — Continue (Frame 1 → 2) and Back (Frame 2 → 1)
 	//
 	// Behaviour is controlled by HCQBConfig.formLayout:
@@ -304,7 +272,6 @@
 
 		attachInputListeners();
 		initViewToggle();
-		initProductChange();
 		initFrameNav();
 		initConsentToggle();
 

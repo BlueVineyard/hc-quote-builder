@@ -36,9 +36,8 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 
 	<form id="hcqb-quote-form" class="hcqb-contact-form" novalidate>
 
-		<?php // Hidden: action identifier, product ID, serialised Frame 1 selections ?>
+		<?php // Hidden: action identifier, serialised Frame 1 selections ?>
 		<input type="hidden" name="action"          value="hcqb_submit_quote">
-		<input type="hidden" name="product_id"      value="<?php echo esc_attr( $product_id ); ?>">
 		<input type="hidden" id="hcqb-selections"   name="hcqb_selections" value="">
 
 		<?php // Security nonce — verified by PHP in Stage 9 ?>
