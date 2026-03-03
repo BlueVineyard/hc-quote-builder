@@ -170,6 +170,18 @@
 	overflow: hidden;
 }
 
+.hcqb-questions-list__heading {
+	font-size: 14px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var( --hcqb-qb-text );
+	padding: 16px 20px;
+	margin: 0;
+	border-bottom: 1px solid var( --hcqb-qb-border );
+	background: var( --hcqb-qb-bg );
+}
+
 /* =============================================================================
    Individual question card
    ============================================================================= */
@@ -664,6 +676,11 @@
 	gap: 8px;
 }
 
+/* Single-country — no prefix dropdown, just the phone input */
+.hcqb-phone-fields--single {
+	grid-template-columns: 1fr;
+}
+
 /* Form groups / labels / inputs -------------------------------------------- */
 
 .hcqb-form-group {
@@ -700,9 +717,9 @@
 }
 
 .hcqb-form-input[readonly] {
-	background: var( --hcqb-qb-bg-alt );
-	color: var( --hcqb-qb-muted );
-	cursor: default;
+	background: #fff;
+	color: #999;
+	cursor: not-allowed;
 }
 
 /* Field-wrap — icon inside input/select ------------------------------------ */

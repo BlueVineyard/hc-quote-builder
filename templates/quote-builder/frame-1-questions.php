@@ -33,6 +33,7 @@ $partial_map = [
 	// Questions list
 	// --------------------------------------------------------------- ?>
 	<div class="hcqb-questions-list">
+		<h3 class="hcqb-questions-list__heading">Container Custom Options</h3>
 
 		<?php
 		// Track rendered keys so duplicate slugs in the config don't share a

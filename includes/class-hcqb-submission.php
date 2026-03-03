@@ -120,16 +120,16 @@ class HCQB_Submission {
 			}
 		}
 
-		$base_price       = 0.0;
-		$filtered_options = [];
+		// Extract base_price from the matching question — keep ALL entries in the list
+		// so every question answer is captured in the submission record.
+		$base_price   = 0.0;
+		$product_name = '';
 		foreach ( $selected_options as $entry ) {
 			if ( in_array( $entry['question_label'], $base_price_q_labels, true ) ) {
-				$base_price = (float) $entry['price'];
-			} else {
-				$filtered_options[] = $entry;
+				$base_price   = (float) $entry['price'];
+				$product_name = $entry['option_label'];
 			}
 		}
-		$selected_options = $filtered_options;
 
 		// Shipping distance — strip any non-numeric chars (e.g. "342 km" → 342.0).
 		$distance_raw = sanitize_text_field( $post['shipping_distance'] ?? '' );
@@ -150,6 +150,7 @@ class HCQB_Submission {
 			'shipping_distance_km' => $distance_km,
 			'total_price'          => (float) ( $post['total_price']                ?? 0 ),
 			'base_price'           => $base_price,
+			'product_name'         => $product_name,
 			'selected_options'     => $selected_options,
 		];
 	}
@@ -165,6 +166,7 @@ class HCQB_Submission {
 		$status_labels = (array) ( hcqb_get_setting( 'submission_status_labels' ) ?: [] );
 		$first_key     = ! empty( $status_labels[0]['key'] ) ? $status_labels[0]['key'] : 'status_1';
 
+		update_post_meta( $post_id, 'hcqb_product_name',          $data['product_name'] ?? '' );
 		update_post_meta( $post_id, 'hcqb_base_price',           $base_price );
 		update_post_meta( $post_id, 'hcqb_selected_options',     $data['selected_options'] );
 		update_post_meta( $post_id, 'hcqb_total_price',          $data['total_price'] );

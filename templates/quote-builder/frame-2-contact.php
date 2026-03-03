@@ -59,8 +59,22 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 		<div class="hcqb-form-section">
 			<p class="hcqb-form-section__title">Your Details</p>
 
-			<?php // Row 1: First Name + Last Name ?>
-			<div class="hcqb-form-row hcqb-form-row--2col">
+			<?php // Row 1: Title + First Name + Last Name ?>
+			<div class="hcqb-form-row hcqb-form-row--prefix">
+				<div class="hcqb-form-group">
+					<label class="hcqb-form-label" for="hcqb-prefix">Title</label>
+					<div class="hcqb-field-wrap hcqb-field-wrap--select">
+						<span class="hcqb-field-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+						<select id="hcqb-prefix" name="prefix" class="hcqb-form-select">
+							<option value="">—</option>
+							<?php foreach ( $prefix_options as $pf ) : ?>
+							<option value="<?php echo esc_attr( $pf ); ?>"><?php echo esc_html( $pf ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<span class="hcqb-field-chevron"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+					</div>
+				</div>
+
 				<div class="hcqb-form-group">
 					<label class="hcqb-form-label" for="hcqb-first-name">
 						First Name <span class="hcqb-required" aria-hidden="true">*</span>
@@ -92,8 +106,8 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 				</div>
 			</div>
 
-			<?php // Row 2: Email + Confirm Email + Title prefix ?>
-			<div class="hcqb-form-row hcqb-form-row--3col">
+			<?php // Row 2: Email + Confirm Email ?>
+			<div class="hcqb-form-row hcqb-form-row--2col">
 				<div class="hcqb-form-group">
 					<label class="hcqb-form-label" for="hcqb-email">
 						Email <span class="hcqb-required" aria-hidden="true">*</span>
@@ -122,26 +136,28 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 					</div>
 					<span class="hcqb-field-error" id="hcqb-err-email-confirm" hidden></span>
 				</div>
-
-				<div class="hcqb-form-group">
-					<label class="hcqb-form-label" for="hcqb-prefix">Title</label>
-					<div class="hcqb-field-wrap hcqb-field-wrap--select">
-						<span class="hcqb-field-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-						<select id="hcqb-prefix" name="prefix" class="hcqb-form-select">
-							<option value="">—</option>
-							<?php foreach ( $prefix_options as $pf ) : ?>
-							<option value="<?php echo esc_attr( $pf ); ?>"><?php echo esc_html( $pf ); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<span class="hcqb-field-chevron"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-					</div>
-				</div>
 			</div>
 
 			<?php // Row 3: Phone (prefix + number) + Address Search ?>
 			<div class="hcqb-form-row hcqb-form-row--phone-search">
 				<div class="hcqb-form-group">
 					<label class="hcqb-form-label">Phone Number</label>
+					<?php if ( count( $supported_countries ) === 1 ) :
+						$single_dial = $phone_prefix_map[ $supported_countries[0] ] ?? '';
+					?>
+					<div class="hcqb-phone-fields hcqb-phone-fields--single">
+						<input type="hidden" name="phone_prefix" value="<?php echo esc_attr( $single_dial ); ?>">
+						<div class="hcqb-field-wrap">
+							<span class="hcqb-field-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 2h3l1.5 3.5-1.75 1.25a9 9 0 004.5 4.5L11.5 9.5 15 11v3a1 1 0 01-1 1C6.268 15 1 9.732 1 3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+							<input type="tel"
+							       id="hcqb-phone"
+							       name="phone"
+							       class="hcqb-form-input"
+							       autocomplete="tel-national"
+							       placeholder="<?php echo esc_attr( $single_dial ); ?>">
+						</div>
+					</div>
+					<?php else : ?>
 					<div class="hcqb-phone-fields">
 						<div class="hcqb-field-wrap hcqb-field-wrap--select">
 							<span class="hcqb-field-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 2h3l1.5 3.5-1.75 1.25a9 9 0 004.5 4.5L11.5 9.5 15 11v3a1 1 0 01-1 1C6.268 15 1 9.732 1 3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -166,6 +182,7 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 							       autocomplete="tel-national">
 						</div>
 					</div>
+					<?php endif; ?>
 				</div>
 
 				<div class="hcqb-form-group">
