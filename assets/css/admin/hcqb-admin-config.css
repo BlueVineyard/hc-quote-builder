@@ -305,3 +305,42 @@
 	color: #1a7a3a;
 	font-weight: 500;
 }
+
+/* =============================================================================
+   Shipping rules list
+   ============================================================================= */
+
+.hcqb-shipping-rules-wrap {
+	margin-bottom: 16px;
+}
+
+.hcqb-shipping-rules-list {
+	margin-bottom: 12px;
+}
+
+.hcqb-shipping-rule-row {
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 12px;
+	padding: 10px 12px;
+}
+
+.hcqb-shipping-rule-row .hcqb-rule-tags-wrap {
+	flex: 1 1 220px;
+	min-width: 160px;
+}
+
+.hcqb-shipping-match-tags-select {
+	width: 100%;
+	min-height: 80px;
+}
+
+.hcqb-shipping-rate-wrap,
+.hcqb-shipping-min-wrap {
+	flex-shrink: 0;
+}
+
+.hcqb-shipping-rate-wrap .small-text,
+.hcqb-shipping-min-wrap .small-text {
+	width: 80px;
+}

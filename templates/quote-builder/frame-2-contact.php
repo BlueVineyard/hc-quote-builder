@@ -287,6 +287,20 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 				</div>
 			</div>
 
+			<?php // Estimated shipping cost — populated by hcqb-shipping.js ?>
+			<div id="hcqb-shipping-estimate" class="hcqb-shipping-estimate" hidden>
+				<div class="hcqb-shipping-estimate__row">
+					<span class="hcqb-shipping-estimate__label">Estimated Shipping Cost</span>
+					<span class="hcqb-shipping-estimate__price">$0.00</span>
+				</div>
+				<p class="hcqb-shipping-estimate__breakdown"></p>
+				<p class="hcqb-form-hint">This is an estimate only. Each enquiry will be calculated upon receipt and a final shipping cost will be confirmed in your formal quote.</p>
+			</div>
+			<input type="hidden"
+			       id="hcqb-estimated-shipping-cost"
+			       name="estimated_shipping_cost"
+			       value="0">
+
 		</div><!-- .hcqb-form-section -->
 
 		<?php // ----------------------------------------------------------------

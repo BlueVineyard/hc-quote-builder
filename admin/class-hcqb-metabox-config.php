@@ -55,6 +55,15 @@ class HCQB_Metabox_Config {
 			'normal',
 			'default'
 		);
+
+		add_meta_box(
+			'hcqb-config-shipping-rules',
+			'Shipping Rules',
+			[ self::class, 'render_meta_box_shipping_rules' ],
+			'hc-quote-configs',
+			'normal',
+			'default'
+		);
 	}
 
 	// =========================================================================
@@ -357,8 +366,8 @@ class HCQB_Metabox_Config {
 		$price       = isset( $opt['price'] ) ? floatval( $opt['price'] ) : 0.0;
 		$price_type  = $opt['price_type']              ?? 'addition';
 		$role        = $opt['option_role']             ?? 'standard';
-		$affects_img = ! empty( $opt['affects_image'] ) ? '1' : '0';
-		$base        = "hcqb_questions[{$q_idx}][options][{$o_idx}]";
+		$affects_img   = ! empty( $opt['affects_image'] ) ? '1' : '0';
+		$base          = "hcqb_questions[{$q_idx}][options][{$o_idx}]";
 		?>
 		<div class="hcqb-repeater__row hcqb-option-row" data-uid="<?php echo $uid; ?>">
 			<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>
@@ -515,6 +524,96 @@ class HCQB_Metabox_Config {
 	}
 
 	// =========================================================================
+	// Render — Shipping Rules (main column)
+	// =========================================================================
+
+	public static function render_meta_box_shipping_rules( WP_Post $post ): void {
+		$rules = get_post_meta( $post->ID, 'hcqb_shipping_rules', true );
+		if ( ! is_array( $rules ) ) {
+			$rules = [];
+		}
+
+		$questions   = get_post_meta( $post->ID, 'hcqb_questions', true );
+		$tag_options = self::get_all_tag_options( is_array( $questions ) ? $questions : [] );
+		?>
+		<p class="description">
+			Each rule assigns a per-km shipping rate when a specific set of option tags is active.
+			Rules are evaluated most-specific-first — the rule with the most matching tags wins.
+		</p>
+		<div class="hcqb-shipping-rules-wrap">
+			<div class="hcqb-shipping-rules-list" id="hcqb-shipping-rules-list">
+				<?php foreach ( $rules as $idx => $rule ) : ?>
+					<?php self::render_shipping_rule_row( $rule, $idx, $tag_options ); ?>
+				<?php endforeach; ?>
+			</div>
+			<button type="button" class="button button-primary" id="hcqb-add-shipping-rule">
+				+ Add Shipping Rule
+			</button>
+		</div>
+		<script>window.hcqbShippingTagOptions = <?php echo wp_json_encode( $tag_options ); ?>;</script>
+		<?php
+	}
+
+	// =========================================================================
+	// Render — single shipping rule row
+	// =========================================================================
+
+	private static function render_shipping_rule_row( array $rule, int $idx, array $tag_options ): void {
+		$saved_tags    = is_array( $rule['match_tags'] ?? null ) ? $rule['match_tags'] : [];
+		$shipping_rate = isset( $rule['shipping_rate'] ) ? floatval( $rule['shipping_rate'] ) : 0.0;
+		$shipping_min  = isset( $rule['shipping_min'] )  ? floatval( $rule['shipping_min'] )  : 0.0;
+		$base          = "hcqb_shipping_rules[{$idx}]";
+		?>
+		<div class="hcqb-repeater__row hcqb-shipping-rule-row">
+			<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>
+
+			<!-- Match tags -->
+			<div class="hcqb-rule-tags-wrap">
+				<span class="hcqb-rule-label">Match tags</span>
+				<select name="<?php echo esc_attr( $base ); ?>[match_tags][]"
+					multiple
+					class="hcqb-shipping-match-tags-select"
+					size="4">
+					<?php foreach ( $tag_options as $slug => $display_label ) : ?>
+						<option value="<?php echo esc_attr( $slug ); ?>"
+							<?php selected( in_array( $slug, $saved_tags, true ) ); ?>>
+							<?php echo esc_html( $display_label ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+				<p class="description">Hold Ctrl / Cmd to select multiple.</p>
+			</div>
+
+			<!-- Shipping rate -->
+			<div class="hcqb-shipping-rate-wrap">
+				<span class="hcqb-rule-label">$/km</span>
+				<input type="number"
+					name="<?php echo esc_attr( $base ); ?>[shipping_rate]"
+					value="<?php echo esc_attr( $shipping_rate ); ?>"
+					class="small-text"
+					step="0.01"
+					min="0"
+					placeholder="0.00">
+			</div>
+
+			<!-- Shipping minimum -->
+			<div class="hcqb-shipping-min-wrap">
+				<span class="hcqb-rule-label">Min $</span>
+				<input type="number"
+					name="<?php echo esc_attr( $base ); ?>[shipping_min]"
+					value="<?php echo esc_attr( $shipping_min ); ?>"
+					class="small-text"
+					step="1"
+					min="0"
+					placeholder="0">
+			</div>
+
+			<button type="button" class="button hcqb-repeater__remove">Remove</button>
+		</div>
+		<?php
+	}
+
+	// =========================================================================
 	// Save
 	// =========================================================================
 
@@ -545,6 +644,9 @@ class HCQB_Metabox_Config {
 
 		$raw_rules = $_POST['hcqb_image_rules'] ?? [];
 		self::save_image_rules( $post_id, is_array( $raw_rules ) ? $raw_rules : [] );
+
+		$raw_shipping = $_POST['hcqb_shipping_rules'] ?? [];
+		self::save_shipping_rules( $post_id, is_array( $raw_shipping ) ? $raw_shipping : [] );
 	}
 
 	// -------------------------------------------------------------------------
@@ -725,6 +827,34 @@ class HCQB_Metabox_Config {
 		update_post_meta( $post_id, 'hcqb_image_rules', $clean );
 	}
 
+	// -------------------------------------------------------------------------
+
+	private static function save_shipping_rules( int $post_id, array $incoming ): void {
+		$clean = [];
+
+		foreach ( $incoming as $rule ) {
+			if ( ! is_array( $rule ) ) {
+				continue;
+			}
+
+			$shipping_rate = round( floatval( $rule['shipping_rate'] ?? 0 ), 2 );
+			if ( $shipping_rate <= 0 ) {
+				continue; // Require a rate to save the rule.
+			}
+
+			$raw_tags   = is_array( $rule['match_tags'] ?? null ) ? $rule['match_tags'] : [];
+			$clean_tags = array_values( array_filter( array_map( 'sanitize_key', $raw_tags ) ) );
+
+			$clean[] = [
+				'match_tags'    => $clean_tags,
+				'shipping_rate' => $shipping_rate,
+				'shipping_min'  => round( floatval( $rule['shipping_min'] ?? 0 ), 2 ),
+			];
+		}
+
+		update_post_meta( $post_id, 'hcqb_shipping_rules', $clean );
+	}
+
 	// =========================================================================
 	// Duplication
 	// =========================================================================
@@ -828,6 +958,31 @@ class HCQB_Metabox_Config {
 				if ( empty( $opt['affects_image'] ) ) {
 					continue;
 				}
+				$slug = $opt['slug'] ?? '';
+				if ( ! $slug ) {
+					continue;
+				}
+				$map[ $slug ] = $q_label . ' — ' . ( $opt['label'] ?? $slug );
+			}
+		}
+		return $map;
+	}
+
+	/**
+	 * Build a slug → "Question — Option" map from ALL options in all questions.
+	 * Used to populate the match-tags multi-select in shipping rule rows.
+	 *
+	 * @param  array $questions  hcqb_questions post meta array.
+	 * @return array<string,string>  option_slug => "Q Label — O Label"
+	 */
+	private static function get_all_tag_options( array $questions ): array {
+		$map = [];
+		foreach ( $questions as $q ) {
+			if ( empty( $q['options'] ) || ! is_array( $q['options'] ) ) {
+				continue;
+			}
+			$q_label = $q['label'] ?? '';
+			foreach ( $q['options'] as $opt ) {
 				$slug = $opt['slug'] ?? '';
 				if ( ! $slug ) {
 					continue;

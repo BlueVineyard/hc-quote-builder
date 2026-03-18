@@ -132,26 +132,28 @@ class HCQB_Submission {
 		}
 
 		// Shipping distance — strip any non-numeric chars (e.g. "342 km" → 342.0).
-		$distance_raw = sanitize_text_field( $post['shipping_distance'] ?? '' );
-		$distance_km  = (float) preg_replace( '/[^\d.]/', '', $distance_raw );
+		$distance_raw       = sanitize_text_field( $post['shipping_distance'] ?? '' );
+		$distance_km        = (float) preg_replace( '/[^\d.]/', '', $distance_raw );
+		$estimated_shipping = (float) ( $post['estimated_shipping_cost'] ?? 0 );
 
 		return [
-			'prefix'               => sanitize_text_field( $post['prefix']           ?? '' ),
-			'first_name'           => sanitize_text_field( $post['first_name']       ?? '' ),
-			'last_name'            => sanitize_text_field( $post['last_name']        ?? '' ),
-			'email'                => sanitize_email(      $post['email']            ?? '' ),
-			'phone'                => $phone_full,
-			'street'               => sanitize_text_field( $post['street']           ?? '' ),
-			'suburb'               => sanitize_text_field( $post['suburb']           ?? '' ),
-			'state'                => sanitize_text_field( $post['state']            ?? '' ),
-			'postcode'             => sanitize_text_field( $post['postcode']         ?? '' ),
-			'lat'                  => sanitize_text_field( $post['lat']              ?? '' ),
-			'lng'                  => sanitize_text_field( $post['lng']              ?? '' ),
-			'shipping_distance_km' => $distance_km,
-			'total_price'          => (float) ( $post['total_price']                ?? 0 ),
-			'base_price'           => $base_price,
-			'product_name'         => $product_name,
-			'selected_options'     => $selected_options,
+			'prefix'                  => sanitize_text_field( $post['prefix']           ?? '' ),
+			'first_name'              => sanitize_text_field( $post['first_name']       ?? '' ),
+			'last_name'               => sanitize_text_field( $post['last_name']        ?? '' ),
+			'email'                   => sanitize_email(      $post['email']            ?? '' ),
+			'phone'                   => $phone_full,
+			'street'                  => sanitize_text_field( $post['street']           ?? '' ),
+			'suburb'                  => sanitize_text_field( $post['suburb']           ?? '' ),
+			'state'                   => sanitize_text_field( $post['state']            ?? '' ),
+			'postcode'                => sanitize_text_field( $post['postcode']         ?? '' ),
+			'lat'                     => sanitize_text_field( $post['lat']              ?? '' ),
+			'lng'                     => sanitize_text_field( $post['lng']              ?? '' ),
+			'shipping_distance_km'    => $distance_km,
+			'estimated_shipping_cost' => $estimated_shipping,
+			'total_price'             => (float) ( $post['total_price']                ?? 0 ),
+			'base_price'              => $base_price,
+			'product_name'            => $product_name,
+			'selected_options'        => $selected_options,
 		];
 	}
 
@@ -179,7 +181,8 @@ class HCQB_Submission {
 		update_post_meta( $post_id, 'hcqb_address_city',         $data['suburb'] );
 		update_post_meta( $post_id, 'hcqb_address_state',        $data['state'] );
 		update_post_meta( $post_id, 'hcqb_address_postcode',     $data['postcode'] );
-		update_post_meta( $post_id, 'hcqb_shipping_distance_km', $data['shipping_distance_km'] );
+		update_post_meta( $post_id, 'hcqb_shipping_distance_km',    $data['shipping_distance_km'] );
+		update_post_meta( $post_id, 'hcqb_estimated_shipping_cost', $data['estimated_shipping_cost'] ?? 0 );
 		update_post_meta( $post_id, 'hcqb_submission_status',    $first_key );
 		// ISO 8601 UTC timestamp — gmdate() always returns UTC.
 		update_post_meta( $post_id, 'hcqb_submitted_at',         gmdate( 'Y-m-d\TH:i:s\Z' ) );

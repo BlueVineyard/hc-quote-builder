@@ -408,7 +408,7 @@
 }
 
 .hcqb-pill {
-	display: flex;
+	display: none;
 	align-items: center;
 	gap: 12px;
 	padding: 8px 16px 8px 8px;
@@ -419,6 +419,7 @@
 }
 
 .hcqb-pill--active {
+	display: flex;
 	border-color: var( --hcqb-qb-accent );
 }
 
@@ -806,6 +807,45 @@
 
 .hcqb-address-box .hcqb-form-row {
 	margin-bottom: 0;
+}
+
+/* Shipping estimate — displayed below the distance field */
+
+.hcqb-shipping-estimate {
+	margin-top: 12px;
+	padding: 12px 16px;
+	background: var( --hcqb-qb-surface, #f8f9fa );
+	border-radius: 6px;
+	border-left: 3px solid var( --hcqb-qb-accent );
+}
+
+.hcqb-shipping-estimate__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+}
+
+.hcqb-shipping-estimate__label {
+	font-weight: 600;
+	font-size: 14px;
+}
+
+.hcqb-shipping-estimate__price {
+	font-weight: 700;
+	font-size: 18px;
+	color: var( --hcqb-qb-accent );
+}
+
+.hcqb-shipping-estimate__breakdown {
+	margin: 4px 0 0;
+	font-size: 13px;
+	color: var( --hcqb-qb-muted, #6c757d );
+}
+
+.hcqb-shipping-estimate .hcqb-form-hint {
+	margin-top: 6px;
+	font-size: 12px;
 }
 
 /* Map container ------------------------------------------------------------ */

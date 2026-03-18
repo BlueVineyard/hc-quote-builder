@@ -52,6 +52,9 @@ Delivery Address: <?php echo $full_address . "\n"; ?>
 <?php if ( $data['shipping_distance_km'] > 0 ) : ?>
 Estimated Distance: approximately <?php echo number_format( $data['shipping_distance_km'], 0 ) . " km\n"; ?>
 <?php endif; ?>
+<?php if ( ( $data['estimated_shipping_cost'] ?? 0 ) > 0 ) : ?>
+Estimated Shipping Cost: <?php echo hcqb_format_price( $data['estimated_shipping_cost'] ) . "\n"; ?>
+<?php endif; ?>
 Final shipping cost will be confirmed in your formal quote.
 
 <?php echo str_repeat( '-', 52 ) . "\n"; ?>

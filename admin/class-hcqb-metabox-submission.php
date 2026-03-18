@@ -68,6 +68,7 @@ class HCQB_Metabox_Submission {
 		$state        = get_post_meta( $post_id, 'hcqb_address_state',        true );
 		$postcode     = get_post_meta( $post_id, 'hcqb_address_postcode',     true );
 		$distance_km  = (float) get_post_meta( $post_id, 'hcqb_shipping_distance_km', true );
+		$est_shipping = (float) get_post_meta( $post_id, 'hcqb_estimated_shipping_cost', true );
 		$status_key   = get_post_meta( $post_id, 'hcqb_submission_status',   true );
 		$submitted_at = get_post_meta( $post_id, 'hcqb_submitted_at',         true );
 
@@ -172,6 +173,14 @@ class HCQB_Metabox_Submission {
 						<tr>
 							<th>Est. Distance</th>
 							<td><?php echo esc_html( number_format( $distance_km, 0 ) . ' km' ); ?></td>
+						</tr>
+					<?php endif; ?>
+					<?php if ( $est_shipping > 0 ) : ?>
+						<tr>
+							<th>Est. Shipping Cost</th>
+							<td><?php echo esc_html( hcqb_format_price( $est_shipping ) ); ?>
+								<em style="color:#666;font-size:12px">(estimate only)</em>
+							</td>
 						</tr>
 					<?php endif; ?>
 				</table>

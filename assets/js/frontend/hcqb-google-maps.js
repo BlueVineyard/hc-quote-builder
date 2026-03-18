@@ -204,6 +204,12 @@
 				var element = response.rows[ 0 ].elements[ 0 ];
 				if ( element.status !== 'OK' ) { return; }
 				setField( 'hcqb-distance', element.distance.text );
+
+				// Dispatch numeric distance for shipping cost calculation.
+				var distanceKm = element.distance.value / 1000;
+				document.dispatchEvent( new CustomEvent( 'hcqb:distance-changed', {
+					detail: { distanceKm: distanceKm, distanceText: element.distance.text },
+				} ) );
 			}
 		);
 	}

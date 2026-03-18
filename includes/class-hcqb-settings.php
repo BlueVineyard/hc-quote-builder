@@ -492,6 +492,21 @@ class HCQB_Settings {
 						<p class="description">When disabled, the image preview is fixed to the Front view and the view switcher buttons are hidden.</p>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row">
+						<label for="hcqb_lease_enquiry_form_id">Lease Enquiry Form</label>
+					</th>
+					<td>
+						<input type="number"
+						       id="hcqb_lease_enquiry_form_id"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[lease_enquiry_form_id]"
+						       value="<?php echo esc_attr( $settings['lease_enquiry_form_id'] ?? 0 ); ?>"
+						       class="small-text"
+						       min="0"
+						       step="1">
+						<p class="description">Fluent Form ID to display in the lease "Enquire Now" modal. Leave <code>0</code> to keep the default link behaviour.</p>
+					</td>
+				</tr>
 			</table>
 		</div>
 		<?php
@@ -1229,6 +1244,7 @@ class HCQB_Settings {
 		$clean['consent_text']          = sanitize_text_field( $raw['consent_text']          ?? '' );
 		$clean['privacy_fine_print']    = wp_kses_post( $raw['privacy_fine_print']          ?? '' );
 		$clean['show_view_angles']      = absint( $raw['show_view_angles'] ?? 0 ) ? 1 : 0;
+		$clean['lease_enquiry_form_id'] = absint( $raw['lease_enquiry_form_id'] ?? 0 );
 
 		// ---- Tab 4 — Prefix options ----
 		$clean['prefix_options'] = [];
@@ -1306,6 +1322,7 @@ class HCQB_Settings {
 			'consent_text'          => 'I agree to be contacted regarding this quote request.',
 			'privacy_fine_print'    => '',
 			'show_view_angles'      => 0,
+			'lease_enquiry_form_id' => 0,
 			// Form Options
 			'prefix_options'           => [ 'Mr', 'Mrs', 'Ms', 'Dr' ],
 			'submission_status_labels' => [

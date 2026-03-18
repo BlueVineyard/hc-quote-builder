@@ -98,6 +98,7 @@ class HCQB_Plugin {
 
 		// --- Stage 5 — Product Page Template ---
 		add_filter( 'template_include',   [ $this, 'override_container_template' ] );
+		add_action( 'wp_enqueue_scripts', [ $this, 'register_frontend_assets' ], 5 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_product_page_assets' ] );
 
 		// --- Stage 5.1 / 6 — Shortcodes + Grid CSS ---
@@ -231,6 +232,13 @@ class HCQB_Plugin {
 			true
 		);
 		wp_enqueue_script(
+			'hcqb-shipping',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-shipping.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+		wp_enqueue_script(
 			'hcqb-form-submit',
 			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-form-submit.js',
 			[],
@@ -242,7 +250,7 @@ class HCQB_Plugin {
 		wp_enqueue_script(
 			'hcqb-quote-builder',
 			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-quote-builder.js',
-			[ 'hcqb-pricing', 'hcqb-image-switcher', 'hcqb-conditionals', 'hcqb-feature-pills', 'hcqb-google-maps', 'hcqb-form-submit' ],
+			[ 'hcqb-pricing', 'hcqb-image-switcher', 'hcqb-conditionals', 'hcqb-feature-pills', 'hcqb-google-maps', 'hcqb-shipping', 'hcqb-form-submit' ],
 			HCQB_VERSION,
 			true
 		);
@@ -283,16 +291,32 @@ class HCQB_Plugin {
 		return $template;
 	}
 
-	public function enqueue_product_page_assets(): void {
-		if ( ! is_singular( 'hc-containers' ) ) {
-			return;
-		}
-		wp_enqueue_style(
+	/**
+	 * Register frontend assets so shortcodes and templates can enqueue by handle.
+	 */
+	public function register_frontend_assets(): void {
+		wp_register_style(
 			'hcqb-product-page',
 			HCQB_PLUGIN_URL . 'assets/css/frontend/hcqb-product-page.css',
 			[],
 			HCQB_VERSION
 		);
+
+		wp_register_script(
+			'hcqb-gallery',
+			HCQB_PLUGIN_URL . 'assets/js/frontend/hcqb-gallery.js',
+			[],
+			HCQB_VERSION,
+			true
+		);
+	}
+
+	public function enqueue_product_page_assets(): void {
+		if ( ! is_singular( 'hc-containers' ) ) {
+			return;
+		}
+		wp_enqueue_style( 'hcqb-product-page' );
+		wp_enqueue_script( 'hcqb-gallery' );
 
 		// Output CSS custom property overrides from the Styles settings tab.
 		$this->output_product_page_style_overrides();

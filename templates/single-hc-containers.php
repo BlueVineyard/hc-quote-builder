@@ -251,7 +251,7 @@ get_header();
 
 					<?php if ( $description ) : ?>
 					<div class="hcqb-product-description">
-						<?php echo wp_kses_post( $description ); ?>
+						<?php echo wp_kses_post( wpautop( $description ) ); ?>
 					</div>
 					<?php endif; ?>
 
@@ -278,7 +278,7 @@ get_header();
 					<?php endif; ?>
 
 					<?php if ( $add_notes ) : ?>
-					<div class="hcqb-additional-notes"><?php echo wp_kses_post( $add_notes ); ?></div>
+					<div class="hcqb-additional-notes"><?php echo wp_kses_post( wpautop( $add_notes ) ); ?></div>
 					<?php endif; ?>
 
 					<?php // Flatpack + assembled pricing as red text ?>
@@ -345,7 +345,7 @@ get_header();
 
 			<?php if ( $lease_terms ) : ?>
 			<div class="hcqb-lease-terms">
-				<?php echo wp_kses_post( $lease_terms ); ?>
+				<?php echo wp_kses_post( wpautop( $lease_terms ) ); ?>
 			</div>
 			<?php endif; ?>
 
@@ -355,7 +355,7 @@ get_header();
 				<h3 class="hcqb-lease-layout__title"><?php echo esc_html( $lease_layout_title ); ?></h3>
 				<?php endif; ?>
 				<?php if ( $lease_layout_desc ) : ?>
-				<div class="hcqb-lease-layout__desc"><?php echo wp_kses_post( $lease_layout_desc ); ?></div>
+				<div class="hcqb-lease-layout__desc"><?php echo wp_kses_post( wpautop( $lease_layout_desc ) ); ?></div>
 				<?php endif; ?>
 			</div>
 			<?php endif; ?>
@@ -392,25 +392,5 @@ get_header();
 
 </div><!-- .hcqb-product-container -->
 </main>
-
-<?php // =========================================================================
-// Gallery thumbnail switcher — minimal inline script
-// ========================================================================= ?>
-<?php if ( count( $gallery_ids ) > 1 ) : ?>
-<script>
-( function () {
-	var mainImg = document.getElementById( 'hcqb-main-img' );
-	document.querySelectorAll( '.hcqb-gallery-thumb' ).forEach( function ( btn ) {
-		btn.addEventListener( 'click', function () {
-			mainImg.src = this.dataset.full;
-			document.querySelectorAll( '.hcqb-gallery-thumb' ).forEach( function ( b ) {
-				b.classList.remove( 'hcqb-gallery-thumb--active' );
-			} );
-			this.classList.add( 'hcqb-gallery-thumb--active' );
-		} );
-	} );
-}() );
-</script>
-<?php endif; ?>
 
 <?php get_footer(); ?>

@@ -148,6 +148,10 @@
 		if ( window.HCQBState && HCQBState.currentPrice !== undefined ) {
 			data.set( 'total_price', HCQBState.currentPrice );
 		}
+		// Append estimated shipping cost.
+		if ( window.HCQBState && HCQBState.estimatedShipping !== undefined ) {
+			data.set( 'estimated_shipping_cost', HCQBState.estimatedShipping );
+		}
 
 		fetch( ajaxUrl, { method: 'POST', body: data } )
 			.then( function ( res ) {

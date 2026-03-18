@@ -103,6 +103,7 @@
 				row.remove();
 				refreshConditionalDropdowns();
 				rebuildImageTagSelects();
+			rebuildShippingTagSelects();
 			} );
 		}
 
@@ -411,6 +412,7 @@
 				oRow.remove();
 				refreshAssemblyStates( qRow );
 				rebuildImageTagSelects();
+			rebuildShippingTagSelects();
 			} );
 		}
 
@@ -432,6 +434,7 @@
 					if ( slugDisplay ) slugDisplay.value = generated;
 				}
 				rebuildImageTagSelects();
+			rebuildShippingTagSelects();
 			} );
 		}
 
@@ -442,6 +445,7 @@
 				this.value = slug;
 				if ( slugHidden ) slugHidden.value = slug;
 				rebuildImageTagSelects();
+			rebuildShippingTagSelects();
 			} );
 		}
 
@@ -458,6 +462,7 @@
 		if ( affectsCheck ) {
 			affectsCheck.addEventListener( 'change', function () {
 				rebuildImageTagSelects();
+			rebuildShippingTagSelects();
 			} );
 		}
 
@@ -487,6 +492,7 @@
 		list.appendChild( oRow );
 		initOptionRow( oRow, qRow );
 		rebuildImageTagSelects();
+		rebuildShippingTagSelects();
 	}
 
 	function buildOptionRow( uid, qIdx, oIdx ) {
@@ -709,6 +715,114 @@
 			} );
 		} );
 		return map;
+	}
+
+	// =========================================================================
+	// Shipping tag selects
+	// Rescans the DOM for ALL options (regardless of affects_image)
+	// and rebuilds all .hcqb-shipping-match-tags-select elements.
+	// =========================================================================
+
+	function rebuildShippingTagSelects() {
+		var tagOptions = buildAllTagOptionsFromDom();
+		window.hcqbShippingTagOptions = tagOptions;
+
+		document.querySelectorAll( '.hcqb-shipping-match-tags-select' ).forEach( function ( select ) {
+			var saved = Array.from( select.selectedOptions ).map( function ( opt ) { return opt.value; } );
+			select.innerHTML = '';
+
+			Object.keys( tagOptions ).forEach( function ( slug ) {
+				var opt         = document.createElement( 'option' );
+				opt.value       = slug;
+				opt.textContent = tagOptions[ slug ];
+				if ( saved.indexOf( slug ) !== -1 ) opt.selected = true;
+				select.appendChild( opt );
+			} );
+		} );
+	}
+
+	function buildAllTagOptionsFromDom() {
+		var map = {};
+		document.querySelectorAll( '#hcqb-questions-list > .hcqb-question-row' ).forEach( function ( qRow ) {
+			var qLabelInput = qRow.querySelector( '.hcqb-question-label-input' );
+			var qLabel      = qLabelInput ? ( qLabelInput.value || '' ) : '';
+
+			qRow.querySelectorAll( '.hcqb-option-row' ).forEach( function ( oRow ) {
+				var slugInput  = oRow.querySelector( '.hcqb-option-slug-hidden' );
+				var labelInput = oRow.querySelector( '.hcqb-option-label-input' );
+
+				var slug  = slugInput  ? slugInput.value  : '';
+				var label = labelInput ? labelInput.value : '';
+
+				if ( ! slug && label ) slug = slugify( label );
+				if ( ! slug ) return;
+
+				map[ slug ] = ( qLabel ? qLabel + ' — ' : '' ) + ( label || slug );
+			} );
+		} );
+		return map;
+	}
+
+	// =========================================================================
+	// Shipping rules
+	// =========================================================================
+
+	function initAllShippingRules() {
+		document.querySelectorAll( '#hcqb-shipping-rules-list > .hcqb-shipping-rule-row' ).forEach( function ( row ) {
+			initShippingRuleRow( row );
+		} );
+	}
+
+	function initShippingRuleRow( row ) {
+		var removeBtn = row.querySelector( '.hcqb-repeater__remove' );
+		if ( removeBtn ) {
+			removeBtn.addEventListener( 'click', function () {
+				row.remove();
+			} );
+		}
+	}
+
+	function addShippingRule() {
+		var list = document.getElementById( 'hcqb-shipping-rules-list' );
+		if ( ! list ) return;
+
+		var rIdx = nextTempIdx();
+		var row  = buildShippingRuleRow( rIdx );
+		list.appendChild( row );
+		initShippingRuleRow( row );
+	}
+
+	function buildShippingRuleRow( rIdx ) {
+		var b   = 'hcqb_shipping_rules[' + rIdx + ']';
+		var row = document.createElement( 'div' );
+		row.className = 'hcqb-repeater__row hcqb-shipping-rule-row';
+
+		var tagOptions  = window.hcqbShippingTagOptions || {};
+		var optionsHtml = '';
+		Object.keys( tagOptions ).forEach( function ( slug ) {
+			optionsHtml += '<option value="' + escAttr( slug ) + '">' + escAttr( tagOptions[ slug ] ) + '</option>';
+		} );
+
+		row.innerHTML =
+			'<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>' +
+			'<div class="hcqb-rule-tags-wrap">' +
+				'<span class="hcqb-rule-label">Match tags</span>' +
+				'<select name="' + escAttr( b ) + '[match_tags][]" multiple class="hcqb-shipping-match-tags-select" size="4">' +
+					optionsHtml +
+				'</select>' +
+				'<p class="description">Hold Ctrl / Cmd to select multiple.</p>' +
+			'</div>' +
+			'<div class="hcqb-shipping-rate-wrap">' +
+				'<span class="hcqb-rule-label">$/km</span>' +
+				'<input type="number" name="' + escAttr( b ) + '[shipping_rate]" value="0" class="small-text" step="0.01" min="0" placeholder="0.00">' +
+			'</div>' +
+			'<div class="hcqb-shipping-min-wrap">' +
+				'<span class="hcqb-rule-label">Min $</span>' +
+				'<input type="number" name="' + escAttr( b ) + '[shipping_min]" value="0" class="small-text" step="1" min="0" placeholder="0">' +
+			'</div>' +
+			'<button type="button" class="button hcqb-repeater__remove">Remove</button>';
+
+		return row;
 	}
 
 	// =========================================================================
@@ -1144,6 +1258,14 @@
 				el.name = el.name.replace( /^hcqb_image_rules\[\d+\]/, 'hcqb_image_rules[' + rIdx + ']' );
 			} );
 		} );
+
+		// Shipping rules.
+		var sRows = document.querySelectorAll( '#hcqb-shipping-rules-list > .hcqb-shipping-rule-row' );
+		sRows.forEach( function ( sRow, sIdx ) {
+			sRow.querySelectorAll( '[name]' ).forEach( function ( el ) {
+				el.name = el.name.replace( /^hcqb_shipping_rules\[\d+\]/, 'hcqb_shipping_rules[' + sIdx + ']' );
+			} );
+		} );
 	}
 
 	// =========================================================================
@@ -1167,6 +1289,13 @@
 		var genBtn = document.getElementById( 'hcqb-generate-image-rules' );
 		if ( genBtn ) {
 			genBtn.addEventListener( 'click', openGenerateDialog );
+		}
+
+		// Shipping rules.
+		initAllShippingRules();
+		var addShippingBtn = document.getElementById( 'hcqb-add-shipping-rule' );
+		if ( addShippingBtn ) {
+			addShippingBtn.addEventListener( 'click', addShippingRule );
 		}
 
 		// Populate conditional dropdowns from current question data,

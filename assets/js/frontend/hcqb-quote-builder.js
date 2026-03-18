@@ -30,9 +30,10 @@
 	// -------------------------------------------------------------------------
 
 	window.HCQBState = {
-		activeTags:   [],
-		currentPrice: HCQBConfig.basePrice,
-		currentView:  'front',
+		activeTags:        [],
+		currentPrice:      HCQBConfig.basePrice,
+		currentView:       'front',
+		estimatedShipping: 0,
 	};
 
 	// -------------------------------------------------------------------------
@@ -269,6 +270,7 @@
 		if ( window.HCQBPricing       ) { HCQBPricing.init();       }
 		if ( window.HCQBImageSwitcher ) { HCQBImageSwitcher.init(); }
 		if ( window.HCQBFeaturePills  ) { HCQBFeaturePills.init();  }
+		if ( window.HCQBShipping      ) { HCQBShipping.init();      }
 
 		attachInputListeners();
 		initViewToggle();

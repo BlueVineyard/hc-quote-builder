@@ -41,6 +41,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class HCQB_Shortcodes {
 
+	/** Whether the enquire-modal inline JS has already been output. */
+	private static bool $enquire_modal_js_output = false;
+
 	// -------------------------------------------------------------------------
 	// Registration
 	// -------------------------------------------------------------------------
@@ -56,6 +59,7 @@ class HCQB_Shortcodes {
 		add_shortcode( 'hcqb_description',        [ __CLASS__, 'sc_description'        ] );
 		add_shortcode( 'hcqb_additional_notes',   [ __CLASS__, 'sc_additional_notes'   ] );
 		add_shortcode( 'hcqb_gallery',            [ __CLASS__, 'sc_gallery'            ] );
+		add_shortcode( 'hcqb_image_list',         [ __CLASS__, 'sc_image_list'         ] );
 		add_shortcode( 'hcqb_main_image',         [ __CLASS__, 'sc_main_image'         ] );
 		add_shortcode( 'hcqb_features',           [ __CLASS__, 'sc_features'           ] );
 		add_shortcode( 'hcqb_plan_document',      [ __CLASS__, 'sc_plan_document'      ] );
@@ -254,7 +258,7 @@ class HCQB_Shortcodes {
 		if ( ! $post_id ) {
 			return '';
 		}
-		return wp_kses_post( get_post_meta( $post_id, 'hcqb_product_description', true ) );
+		return wp_kses_post( wpautop( get_post_meta( $post_id, 'hcqb_product_description', true ) ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -277,14 +281,7 @@ class HCQB_Shortcodes {
 		if ( ! $notes ) {
 			return '';
 		}
-		ob_start();
-		?>
-		<div class="hcqb-additional-notes">
-			<h3>Additional Notes</h3>
-			<div class="hcqb-additional-notes__body"><?php echo wp_kses_post( $notes ); ?></div>
-		</div>
-		<?php
-		return ob_get_clean();
+		return wp_kses_post( wpautop( $notes ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -292,17 +289,23 @@ class HCQB_Shortcodes {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Output all product images as a thumbnail strip.
+	 * Output a WooCommerce-style product gallery (main image + clickable thumbnails).
 	 *
-	 * @param array|string $atts  Shortcode attributes. Accepts: post_id, size (default "thumbnail").
-	 * @return string  HTML div containing thumbnail images.
+	 * @param array|string $atts  Shortcode attributes. Accepts: post_id, size, thumb_size.
+	 * @return string  Full gallery HTML.
 	 */
 	public static function sc_gallery( array|string $atts ): string {
-		$atts    = shortcode_atts( [ 'post_id' => 0, 'size' => 'thumbnail' ], (array) $atts );
+		$atts    = shortcode_atts( [
+			'post_id'    => 0,
+			'size'       => 'large',
+			'thumb_size' => 'thumbnail',
+		], (array) $atts );
+
 		$post_id = self::get_post_id( $atts );
 		if ( ! $post_id ) {
 			return '';
 		}
+
 		$ids = array_filter( array_map( 'absint', (array) ( get_post_meta( $post_id, 'hcqb_product_images', true ) ?: [] ) ) );
 		if ( empty( $ids ) ) {
 			$thumb = (int) get_post_thumbnail_id( $post_id );
@@ -313,16 +316,95 @@ class HCQB_Shortcodes {
 		if ( empty( $ids ) ) {
 			return '';
 		}
+
+		// Ensure gallery assets are loaded.
+		wp_enqueue_style( 'hcqb-product-page' );
+		wp_enqueue_script( 'hcqb-gallery' );
+
+		$main_id   = $ids[0];
+		$main_url  = wp_get_attachment_image_url( $main_id, $atts['size'] );
+		$main_alt  = trim( (string) get_post_meta( $main_id, '_wp_attachment_image_alt', true ) );
+		$has_thumbs = count( $ids ) > 1;
+		$title      = get_the_title( $post_id );
+
 		ob_start();
-		echo '<div class="hcqb-gallery-thumbs">';
-		foreach ( $ids as $id ) {
-			$img = wp_get_attachment_image( $id, $atts['size'] );
-			if ( $img ) {
-				echo '<div class="hcqb-gallery-thumb">' . $img . '</div>';
+		?>
+		<div class="hcqb-product-gallery">
+			<div class="hcqb-gallery-layout<?php echo $has_thumbs ? ' hcqb-gallery-layout--with-thumbs' : ''; ?>">
+
+				<?php if ( $has_thumbs ) : ?>
+				<div class="hcqb-gallery-thumbs swiper">
+					<div class="swiper-wrapper">
+						<?php foreach ( $ids as $img_id ) :
+							$thumb_url = wp_get_attachment_image_url( $img_id, $atts['thumb_size'] );
+							$full_url  = wp_get_attachment_image_url( $img_id, $atts['size'] );
+							$alt       = trim( (string) get_post_meta( $img_id, '_wp_attachment_image_alt', true ) );
+						?>
+						<button type="button"
+						        class="hcqb-gallery-thumb swiper-slide<?php echo $img_id === $main_id ? ' hcqb-gallery-thumb--active' : ''; ?>"
+						        data-full="<?php echo esc_url( $full_url ); ?>"
+						        aria-label="View image">
+							<img src="<?php echo esc_url( $thumb_url ); ?>"
+							     alt="<?php echo esc_attr( $alt ?: $title ); ?>">
+						</button>
+						<?php endforeach; ?>
+					</div>
+					<div class="hcqb-gallery-nav hcqb-gallery-nav--prev"></div>
+					<div class="hcqb-gallery-nav hcqb-gallery-nav--next"></div>
+				</div>
+				<?php endif; ?>
+
+				<div class="hcqb-gallery-main">
+					<img src="<?php echo esc_url( $main_url ); ?>"
+					     alt="<?php echo esc_attr( $main_alt ?: $title ); ?>"
+					     class="hcqb-gallery-main__img">
+				</div>
+
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	// -------------------------------------------------------------------------
+	// [hcqb_image_list]
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Output all gallery images as a simple list of img tags.
+	 *
+	 * @param array|string $atts  Shortcode attributes. Accepts: post_id, size (default "large").
+	 * @return string  Sequence of img tags or empty string.
+	 */
+	public static function sc_image_list( array|string $atts ): string {
+		$atts    = shortcode_atts( [ 'post_id' => 0, 'size' => 'large' ], (array) $atts );
+		$post_id = self::get_post_id( $atts );
+		if ( ! $post_id ) {
+			return '';
+		}
+
+		$ids = array_filter( array_map( 'absint', (array) ( get_post_meta( $post_id, 'hcqb_product_images', true ) ?: [] ) ) );
+		if ( empty( $ids ) ) {
+			$thumb = (int) get_post_thumbnail_id( $post_id );
+			if ( $thumb ) {
+				$ids = [ $thumb ];
 			}
 		}
-		echo '</div>';
-		return ob_get_clean();
+		if ( empty( $ids ) ) {
+			return '';
+		}
+
+		$title = get_the_title( $post_id );
+		$out   = '';
+		foreach ( $ids as $img_id ) {
+			$url = wp_get_attachment_image_url( $img_id, $atts['size'] );
+			$alt = trim( (string) get_post_meta( $img_id, '_wp_attachment_image_alt', true ) );
+			if ( ! $url ) {
+				continue;
+			}
+			$out .= '<img class="hcqb-image-list__img" src="' . esc_url( $url ) . '" alt="' . esc_attr( $alt ?: $title ) . '">' . "\n";
+		}
+		return $out;
 	}
 
 	// -------------------------------------------------------------------------
@@ -496,7 +578,7 @@ class HCQB_Shortcodes {
 		if ( ! $post_id || ! get_post_meta( $post_id, 'hcqb_lease_enabled', true ) ) {
 			return '';
 		}
-		return wp_kses_post( get_post_meta( $post_id, 'hcqb_lease_terms', true ) );
+		return wp_kses_post( wpautop( get_post_meta( $post_id, 'hcqb_lease_terms', true ) ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -534,7 +616,7 @@ class HCQB_Shortcodes {
 		if ( ! $post_id || ! get_post_meta( $post_id, 'hcqb_lease_enabled', true ) ) {
 			return '';
 		}
-		return wp_kses_post( get_post_meta( $post_id, 'hcqb_lease_layout_description', true ) );
+		return wp_kses_post( wpautop( get_post_meta( $post_id, 'hcqb_lease_layout_description', true ) ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -624,12 +706,55 @@ class HCQB_Shortcodes {
 		if ( ! $post_id || ! get_post_meta( $post_id, 'hcqb_lease_enabled', true ) ) {
 			return '';
 		}
+
+		$label   = $atts['label'] ?: ( get_post_meta( $post_id, 'hcqb_enquiry_button_label', true ) ?: 'Enquire Now' );
+		$form_id = (int) hcqb_get_setting( 'lease_enquiry_form_id' );
+
+		// If a Fluent Form ID is set, render a modal button + modal.
+		if ( $form_id > 0 ) {
+			$modal_id   = 'hcqb-enquire-modal-' . $post_id;
+			$form_html  = do_shortcode( '[fluentform id="' . $form_id . '"]' );
+
+			$out  = '<button type="button" class="hcqb-btn hcqb-btn--enquire" data-hcqb-modal="' . esc_attr( $modal_id ) . '">'
+				. esc_html( $label ) . '</button>';
+
+			$out .= '<div id="' . esc_attr( $modal_id ) . '" class="hcqb-modal" hidden>';
+			$out .= '<div class="hcqb-modal__backdrop"></div>';
+			$out .= '<div class="hcqb-modal__dialog">';
+			$out .= '<button type="button" class="hcqb-modal__close" aria-label="Close">&times;</button>';
+			$out .= '<div class="hcqb-modal__body">' . $form_html . '</div>';
+			$out .= '</div>';
+			$out .= '</div>';
+
+			// Inline script — only output once per page.
+			if ( ! self::$enquire_modal_js_output ) {
+				self::$enquire_modal_js_output = true;
+				$out .= '<script>'
+					. '(function(){'
+					. 'function open(m){m.hidden=false;document.body.style.overflow="hidden";}'
+					. 'function close(m){m.hidden=true;document.body.style.overflow="";}'
+					. 'document.addEventListener("click",function(e){'
+					. 'var btn=e.target.closest("[data-hcqb-modal]");'
+					. 'if(btn){e.preventDefault();var m=document.getElementById(btn.dataset.hcqbModal);if(m)open(m);return;}'
+					. 'if(e.target.closest(".hcqb-modal__close")||e.target.classList.contains("hcqb-modal__backdrop")){'
+					. 'var m=e.target.closest(".hcqb-modal");if(m)close(m);}'
+					. '});'
+					. 'document.addEventListener("keydown",function(e){'
+					. 'if(e.key==="Escape"){var m=document.querySelector(".hcqb-modal:not([hidden])");if(m)close(m);}'
+					. '});'
+					. '}());'
+					. '</script>';
+			}
+
+			return $out;
+		}
+
+		// Fallback: link to the quote builder page.
 		$page_id  = (int) hcqb_get_setting( 'quote_builder_page_id' );
 		$page_url = $page_id ? get_permalink( $page_id ) : '';
 		if ( ! $page_url ) {
 			return '';
 		}
-		$label  = $atts['label'] ?: ( get_post_meta( $post_id, 'hcqb_enquiry_button_label', true ) ?: 'Enquire Now' );
 		$config = hcqb_get_active_config_for_product( $post_id );
 		$hidden = $config ? '' : ' hcqb-btn--hidden';
 		return '<a href="' . esc_url( $page_url ) . '" class="hcqb-btn hcqb-btn--enquire' . esc_attr( $hidden ) . '">'
@@ -740,6 +865,10 @@ class HCQB_Shortcodes {
 		unset( $rule );
 		usort( $image_rules, fn( $a, $b ) => count( $b['match_tags'] ) <=> count( $a['match_tags'] ) );
 
+		// Shipping rules — sort most-specific-first.
+		$shipping_rules = get_post_meta( $config->ID, 'hcqb_shipping_rules', true ) ?: [];
+		usort( $shipping_rules, fn( $a, $b ) => count( $b['match_tags'] ?? [] ) <=> count( $a['match_tags'] ?? [] ) );
+
 		// Feature pill questions — max 4, in admin order.
 		$pill_questions = array_map( function ( $q ) {
 			$icon_id = absint( $q['pill_icon_id'] ?? 0 );
@@ -763,6 +892,7 @@ class HCQB_Shortcodes {
 			'basePrice'       => $base_price,
 			'questions'       => $questions,
 			'imageRules'      => $image_rules,
+			'shippingRules'   => $shipping_rules,
 			'defaultImageUrl' => $default_image_url,
 			'pillQuestions'   => array_map( fn( $q ) => $q['key'], $pill_questions ),
 			'formLayout'      => $form_layout,

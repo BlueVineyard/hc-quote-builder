@@ -56,6 +56,9 @@ Delivery Address:  <?php echo $full_address . "\n"; ?>
 <?php if ( $data['shipping_distance_km'] > 0 ) : ?>
 Shipping Distance: approximately <?php echo number_format( $data['shipping_distance_km'], 0 ) . " km from warehouse\n"; ?>
 <?php endif; ?>
+<?php if ( ( $data['estimated_shipping_cost'] ?? 0 ) > 0 ) : ?>
+Est. Shipping Cost: <?php echo hcqb_format_price( $data['estimated_shipping_cost'] ) . " (estimate only)\n"; ?>
+<?php endif; ?>
 
 Submitted: <?php echo $submitted_at . "\n"; ?>
 
