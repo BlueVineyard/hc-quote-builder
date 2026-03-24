@@ -309,7 +309,14 @@ class HCQB_Metabox_Config {
 							$conditions = [ [ 'question' => '', 'option' => '' ] ];
 						}
 						?>
+						<?php $cond_logic = $q['condition_logic'] ?? 'and'; ?>
 						<div class="hcqb-conditional-fields<?php echo $is_cond ? '' : ' hcqb-hidden'; ?>">
+							<div class="hcqb-condition-logic-wrap">
+								<select name="<?php echo esc_attr( $base ); ?>[condition_logic]" class="hcqb-condition-logic">
+									<option value="and" <?php selected( $cond_logic, 'and' ); ?>>ALL conditions must match (AND)</option>
+									<option value="or"  <?php selected( $cond_logic, 'or'  ); ?>>ANY condition must match (OR)</option>
+								</select>
+							</div>
 							<?php foreach ( $conditions as $c_idx => $cond ) :
 								$c_q = esc_attr( $cond['question'] ?? '' );
 								$c_o = esc_attr( $cond['option']   ?? '' );
@@ -333,7 +340,7 @@ class HCQB_Metabox_Config {
 									<?php echo count( $conditions ) > 1 ? '' : 'style="display:none;"'; ?>>Remove</button>
 							</div>
 							<?php endforeach; ?>
-							<button type="button" class="button hcqb-add-condition">+ AND Condition</button>
+							<button type="button" class="button hcqb-add-condition">+ Add Condition</button>
 						</div>
 						</td>
 					</tr>
@@ -359,15 +366,42 @@ class HCQB_Metabox_Config {
 	// Render — single option row
 	// =========================================================================
 
+	/** Cached list of published hc-containers for linked product dropdowns. */
+	private static ?array $cached_products = null;
+
+	private static function get_product_list(): array {
+		if ( self::$cached_products === null ) {
+			self::$cached_products = get_posts( [
+				'post_type'      => 'hc-containers',
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			] );
+		}
+		return self::$cached_products;
+	}
+
 	private static function render_option_row( array $opt, int $q_idx, int $o_idx ): void {
-		$uid         = esc_attr( $opt['_uid']         ?? '' );
-		$slug        = esc_attr( $opt['slug']          ?? '' );
-		$label       = esc_attr( $opt['label']         ?? '' );
-		$price       = isset( $opt['price'] ) ? floatval( $opt['price'] ) : 0.0;
-		$price_type  = $opt['price_type']              ?? 'addition';
-		$role        = $opt['option_role']             ?? 'standard';
-		$affects_img   = ! empty( $opt['affects_image'] ) ? '1' : '0';
-		$base          = "hcqb_questions[{$q_idx}][options][{$o_idx}]";
+		$uid               = esc_attr( $opt['_uid']         ?? '' );
+		$slug              = esc_attr( $opt['slug']          ?? '' );
+		$label             = esc_attr( $opt['label']         ?? '' );
+		$price             = isset( $opt['price'] ) ? floatval( $opt['price'] ) : 0.0;
+		$price_type        = $opt['price_type']              ?? 'addition';
+		$role              = $opt['option_role']             ?? 'standard';
+		$affects_img       = ! empty( $opt['affects_image'] ) ? '1' : '0';
+		$linked_product_id = absint( $opt['linked_product_id'] ?? 0 );
+		$o_is_cond         = ! empty( $opt['is_conditional'] ) ? '1' : '0';
+		$base              = "hcqb_questions[{$q_idx}][options][{$o_idx}]";
+		$products          = self::get_product_list();
+
+		// Option-level conditions.
+		$o_conditions = [];
+		if ( ! empty( $opt['show_when_conditions'] ) && is_array( $opt['show_when_conditions'] ) ) {
+			$o_conditions = $opt['show_when_conditions'];
+		} else {
+			$o_conditions = [ [ 'question' => '', 'option' => '' ] ];
+		}
 		?>
 		<div class="hcqb-repeater__row hcqb-option-row" data-uid="<?php echo $uid; ?>">
 			<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>
@@ -399,6 +433,16 @@ class HCQB_Metabox_Config {
 				<option value="base_price" <?php selected( $role, 'base_price' ); ?>>Base Price</option>
 				<option value="assembly"   <?php selected( $role, 'assembly'   ); ?>>Assembly</option>
 			</select>
+			<span class="hcqb-linked-product-wrap"<?php echo 'base_price' !== $role ? ' style="display:none"' : ''; ?>>
+				<select name="<?php echo esc_attr( $base ); ?>[linked_product_id]" class="hcqb-linked-product">
+					<option value="0">— Link product —</option>
+					<?php foreach ( $products as $p ) : ?>
+						<option value="<?php echo esc_attr( $p->ID ); ?>" <?php selected( $linked_product_id, $p->ID ); ?>>
+							<?php echo esc_html( $p->post_title ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</span>
 			<label class="hcqb-affects-image-label" title="Affects product image display">
 				<input type="checkbox"
 					name="<?php echo esc_attr( $base ); ?>[affects_image]"
@@ -407,7 +451,47 @@ class HCQB_Metabox_Config {
 					class="hcqb-affects-image-check">
 				Image
 			</label>
+			<button type="button" class="hcqb-option-cond-toggle dashicons dashicons-randomize<?php echo '1' === $o_is_cond ? ' active' : ''; ?>"
+				title="Option conditions"></button>
 			<button type="button" class="button hcqb-repeater__remove">Remove</button>
+
+			<?php // Option-level conditional section (full-width below the option fields). ?>
+			<div class="hcqb-option-cond-section"<?php echo '1' !== $o_is_cond ? ' style="display:none"' : ''; ?>>
+				<label>
+					<input type="checkbox"
+						name="<?php echo esc_attr( $base ); ?>[is_conditional]"
+						value="1"
+						<?php checked( $o_is_cond, '1' ); ?>
+						class="hcqb-option-is-conditional-check">
+					Show only when…
+				</label>
+				<div class="hcqb-option-cond-rows<?php echo '1' === $o_is_cond ? '' : ' hcqb-hidden'; ?>">
+					<?php foreach ( $o_conditions as $c_idx => $cond ) :
+						$c_q = esc_attr( $cond['question'] ?? '' );
+						$c_o = esc_attr( $cond['option']   ?? '' );
+					?>
+					<div class="hcqb-condition-row">
+						<select name="<?php echo esc_attr( $base ); ?>[show_when_conditions][<?php echo $c_idx; ?>][question]"
+							class="hcqb-show-when-question">
+							<option value="">— Select question —</option>
+						</select>
+						<select name="<?php echo esc_attr( $base ); ?>[show_when_conditions][<?php echo $c_idx; ?>][option]"
+							class="hcqb-show-when-option">
+							<option value="">— Select option —</option>
+						</select>
+						<?php if ( $c_q ) : ?>
+						<input type="hidden" class="hcqb-init-sw-q" value="<?php echo $c_q; ?>">
+						<?php endif; ?>
+						<?php if ( $c_o ) : ?>
+						<input type="hidden" class="hcqb-init-sw-o" value="<?php echo $c_o; ?>">
+						<?php endif; ?>
+						<button type="button" class="button hcqb-remove-condition"
+							<?php echo count( $o_conditions ) > 1 ? '' : 'style="display:none;"'; ?>>Remove</button>
+					</div>
+					<?php endforeach; ?>
+					<button type="button" class="button hcqb-option-add-condition">+ AND Condition</button>
+				</div>
+			</div>
 		</div>
 		<?php
 	}
@@ -733,7 +817,10 @@ class HCQB_Metabox_Config {
 					continue; // Discard options with no label.
 				}
 
-				$o_slug = $o_uid ? ( $existing_opts_by_uid[ $o_uid ]['slug'] ?? '' ) : '';
+				// Use submitted slug if provided; fall back to existing; generate if new.
+				$submitted_slug = sanitize_key( $opt['slug'] ?? '' );
+				$existing_slug  = $o_uid ? ( $existing_opts_by_uid[ $o_uid ]['slug'] ?? '' ) : '';
+				$o_slug         = $submitted_slug ?: $existing_slug;
 				if ( ! $o_slug ) {
 					$o_slug = hcqb_generate_slug( $o_label );
 				}
@@ -748,14 +835,29 @@ class HCQB_Metabox_Config {
 					$option_role = 'standard';
 				}
 
+				// Option-level conditions (same structure as question-level).
+				$raw_opt_conds   = is_array( $opt['show_when_conditions'] ?? null ) ? $opt['show_when_conditions'] : [];
+				$clean_opt_conds = [];
+				foreach ( $raw_opt_conds as $oc ) {
+					if ( ! is_array( $oc ) ) { continue; }
+					$oc_q = sanitize_key( $oc['question'] ?? '' );
+					$oc_o = sanitize_key( $oc['option']   ?? '' );
+					if ( $oc_q ) {
+						$clean_opt_conds[] = [ 'question' => $oc_q, 'option' => $oc_o ];
+					}
+				}
+
 				$clean_options[] = [
-					'_uid'          => $o_uid,
-					'slug'          => $o_slug,
-					'label'         => $o_label,
-					'price'         => round( floatval( $opt['price'] ?? 0 ), 2 ),
-					'price_type'    => $price_type,
-					'option_role'   => $option_role,
-					'affects_image' => ! empty( $opt['affects_image'] ) ? 1 : 0,
+					'_uid'               => $o_uid,
+					'slug'               => $o_slug,
+					'label'              => $o_label,
+					'price'              => round( floatval( $opt['price'] ?? 0 ), 2 ),
+					'price_type'         => $price_type,
+					'option_role'        => $option_role,
+					'affects_image'      => ! empty( $opt['affects_image'] ) ? 1 : 0,
+					'linked_product_id'  => absint( $opt['linked_product_id'] ?? 0 ),
+					'is_conditional'       => ! empty( $opt['is_conditional'] ) ? 1 : 0,
+					'show_when_conditions' => $clean_opt_conds,
 				];
 			}
 
@@ -786,6 +888,7 @@ class HCQB_Metabox_Config {
 				'show_in_pill'         => ! empty( $q['show_in_pill'] ) ? 1 : 0,
 				'pill_icon_id'         => absint( $q['pill_icon_id'] ?? 0 ),
 				'is_conditional'       => ! empty( $q['is_conditional'] ) ? 1 : 0,
+				'condition_logic'      => in_array( $q['condition_logic'] ?? 'and', [ 'and', 'or' ], true ) ? $q['condition_logic'] : 'and',
 				'show_when_conditions' => $clean_conds,
 				'options'              => $clean_options,
 			];
@@ -1040,14 +1143,29 @@ class HCQB_Metabox_Config {
 				$option_role = in_array( $o['option_role'] ?? '', $valid_option_roles, true )
 					? $o['option_role'] : '';
 
+				// Option-level conditions from import.
+				$raw_o_conds   = is_array( $o['show_when_conditions'] ?? null ) ? $o['show_when_conditions'] : [];
+				$clean_o_conds = [];
+				foreach ( $raw_o_conds as $oc ) {
+					if ( ! is_array( $oc ) ) { continue; }
+					$oc_q = sanitize_key( $oc['question'] ?? '' );
+					$oc_o = sanitize_key( $oc['option']   ?? '' );
+					if ( $oc_q ) {
+						$clean_o_conds[] = [ 'question' => $oc_q, 'option' => $oc_o ];
+					}
+				}
+
 				$clean_opts[] = [
-					'_uid'          => uniqid( 'o_', true ),
-					'slug'          => hcqb_generate_slug( sanitize_text_field( $o['label'] ) ),
-					'label'         => sanitize_text_field( $o['label'] ),
-					'price'         => round( (float) ( $o['price'] ?? 0 ), 2 ),
-					'price_type'    => $price_type,
-					'option_role'   => $option_role,
-					'affects_image' => (int) ! empty( $o['affects_image'] ),
+					'_uid'               => uniqid( 'o_', true ),
+					'slug'               => hcqb_generate_slug( sanitize_text_field( $o['label'] ) ),
+					'label'              => sanitize_text_field( $o['label'] ),
+					'price'              => round( (float) ( $o['price'] ?? 0 ), 2 ),
+					'price_type'         => $price_type,
+					'option_role'        => $option_role,
+					'affects_image'      => (int) ! empty( $o['affects_image'] ),
+					'linked_product_id'  => absint( $o['linked_product_id'] ?? 0 ),
+					'is_conditional'       => ! empty( $o['is_conditional'] ) ? 1 : 0,
+					'show_when_conditions' => $clean_o_conds,
 				];
 			}
 

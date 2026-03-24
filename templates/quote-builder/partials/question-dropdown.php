@@ -27,6 +27,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		$o_price      = (float) ( $opt['price']      ?? 0 );
 		$o_price_type = $opt['price_type']   ?? 'addition';
 		$o_affects    = ! empty( $opt['affects_image'] ) ? '1' : '0';
+		$o_is_cond    = ! empty( $opt['is_conditional'] );
+		$o_conds      = ! empty( $opt['show_when_conditions'] ) ? $opt['show_when_conditions'] : [];
 
 		if ( ! $o_slug || ! $o_label ) {
 			continue;
@@ -42,7 +44,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	        data-price="<?php echo esc_attr( $o_price ); ?>"
 	        data-price-type="<?php echo esc_attr( $o_price_type ); ?>"
 	        data-option-role="<?php echo esc_attr( $opt['option_role'] ?? '' ); ?>"
-	        data-affects-image="<?php echo esc_attr( $o_affects ); ?>">
+	        data-affects-image="<?php echo esc_attr( $o_affects ); ?>"
+	        <?php if ( $o_is_cond && $o_conds ) : ?>
+	        data-option-conditional="true"
+	        data-option-show-when="<?php echo esc_attr( wp_json_encode( $o_conds ) ); ?>"
+	        <?php endif; ?>>
 		<?php echo esc_html( $o_label . $price_annotation ); ?>
 	</option>
 	<?php endforeach; ?>

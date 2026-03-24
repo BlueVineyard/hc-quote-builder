@@ -98,6 +98,16 @@ class HCQB_Admin_Assets {
 			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
 			'postId'      => (string) get_the_ID(),
 			'importNonce' => wp_create_nonce( 'hcqb_import_json' ),
+			'products'    => array_map(
+				fn( $p ) => [ 'id' => $p->ID, 'title' => $p->post_title ],
+				get_posts( [
+					'post_type'      => 'hc-containers',
+					'post_status'    => 'publish',
+					'posts_per_page' => -1,
+					'orderby'        => 'title',
+					'order'          => 'ASC',
+				] )
+			),
 		] );
 	}
 

@@ -313,12 +313,18 @@
 					'<td>' +
 						'<label><input type="checkbox" name="' + escAttr( b ) + '[is_conditional]" value="1" class="hcqb-is-conditional-check"> Only show when another question\'s answer is…</label>' +
 						'<div class="hcqb-conditional-fields hcqb-hidden">' +
+							'<div class="hcqb-condition-logic-wrap">' +
+								'<select name="' + escAttr( b ) + '[condition_logic]" class="hcqb-condition-logic">' +
+									'<option value="and">ALL conditions must match (AND)</option>' +
+									'<option value="or">ANY condition must match (OR)</option>' +
+								'</select>' +
+							'</div>' +
 							'<div class="hcqb-condition-row">' +
 								'<select name="' + escAttr( b ) + '[show_when_conditions][0][question]" class="hcqb-show-when-question"><option value="">— Select question —</option></select>' +
 								'<select name="' + escAttr( b ) + '[show_when_conditions][0][option]"   class="hcqb-show-when-option"><option value="">— Select option —</option></select>' +
 								'<button type="button" class="button hcqb-remove-condition" style="display:none;">Remove</button>' +
 							'</div>' +
-							'<button type="button" class="button hcqb-add-condition">+ AND Condition</button>' +
+							'<button type="button" class="button hcqb-add-condition">+ Add Condition</button>' +
 						'</div>' +
 					'</td></tr>' +
 				'</table>' +
@@ -354,12 +360,23 @@
 	}
 
 	function updateConditionRemoveBtns( qRow ) {
-		var condRows = qRow.querySelectorAll( '.hcqb-condition-row' );
-		condRows.forEach( function ( cr ) {
+		// Question-level conditions (inside .hcqb-conditional-fields).
+		var qCondRows = qRow.querySelectorAll( '.hcqb-conditional-fields > .hcqb-condition-row' );
+		qCondRows.forEach( function ( cr ) {
 			var btn = cr.querySelector( '.hcqb-remove-condition' );
 			if ( btn ) {
-				btn.style.display = condRows.length > 1 ? '' : 'none';
+				btn.style.display = qCondRows.length > 1 ? '' : 'none';
 			}
+		} );
+		// Option-level conditions (inside each .hcqb-option-cond-rows).
+		qRow.querySelectorAll( '.hcqb-option-cond-rows' ).forEach( function ( container ) {
+			var oCondRows = container.querySelectorAll( ':scope > .hcqb-condition-row' );
+			oCondRows.forEach( function ( cr ) {
+				var btn = cr.querySelector( '.hcqb-remove-condition' );
+				if ( btn ) {
+					btn.style.display = oCondRows.length > 1 ? '' : 'none';
+				}
+			} );
 		} );
 	}
 
@@ -449,11 +466,21 @@
 			} );
 		}
 
-		// Assembly role enforcement.
+		// Assembly role enforcement + linked product toggle.
 		var roleSelect = oRow.querySelector( '.hcqb-option-role' );
 		if ( roleSelect ) {
 			roleSelect.addEventListener( 'change', function () {
 				refreshAssemblyStates( qRow );
+				var wrap = oRow.querySelector( '.hcqb-linked-product-wrap' );
+				if ( wrap ) {
+					if ( this.value === 'base_price' ) {
+						wrap.style.display = '';
+					} else {
+						wrap.style.display = 'none';
+						var sel = wrap.querySelector( '.hcqb-linked-product' );
+						if ( sel ) sel.value = '0';
+					}
+				}
 			} );
 		}
 
@@ -463,6 +490,71 @@
 			affectsCheck.addEventListener( 'change', function () {
 				rebuildImageTagSelects();
 			rebuildShippingTagSelects();
+			} );
+		}
+
+		// Option-level conditions — toggle button.
+		var condToggle  = oRow.querySelector( '.hcqb-option-cond-toggle' );
+		var condSection = oRow.querySelector( '.hcqb-option-cond-section' );
+		if ( condToggle && condSection ) {
+			condToggle.addEventListener( 'click', function () {
+				var showing = condSection.style.display !== 'none';
+				condSection.style.display = showing ? 'none' : '';
+				condToggle.classList.toggle( 'active', ! showing );
+				// Populate condition dropdowns when opening (defer to next tick so DOM is settled).
+				if ( ! showing ) {
+					setTimeout( function () {
+						refreshConditionalDropdowns();
+						restoreConditionalValues();
+					}, 0 );
+				}
+			} );
+		}
+
+		// Option-level conditions — is_conditional checkbox.
+		var condCheck = oRow.querySelector( '.hcqb-option-is-conditional-check' );
+		var condRows  = oRow.querySelector( '.hcqb-option-cond-rows' );
+		if ( condCheck && condRows ) {
+			condCheck.addEventListener( 'change', function () {
+				condRows.classList.toggle( 'hcqb-hidden', ! this.checked );
+				// Also populate dropdowns when enabling conditions.
+				if ( this.checked ) {
+					setTimeout( function () {
+						refreshConditionalDropdowns();
+						restoreConditionalValues();
+					}, 0 );
+				}
+			} );
+		}
+
+		// Option-level conditions — init existing condition rows.
+		oRow.querySelectorAll( '.hcqb-option-cond-rows > .hcqb-condition-row' ).forEach( function ( condRow ) {
+			initConditionRow( condRow, qRow );
+		} );
+
+		// Option-level conditions — add condition button.
+		var addCondBtn = oRow.querySelector( '.hcqb-option-add-condition' );
+		if ( addCondBtn ) {
+			addCondBtn.addEventListener( 'click', function () {
+				// Derive the option base name from any named input in the row.
+				var anyInput = oRow.querySelector( '[name^="hcqb_questions"]' );
+				if ( ! anyInput ) return;
+				var match = anyInput.name.match( /^(hcqb_questions\[\d+\]\[options\]\[\d+\])/ );
+				if ( ! match ) return;
+				var optBase = match[ 1 ];
+				var existing = oRow.querySelectorAll( '.hcqb-option-cond-rows > .hcqb-condition-row' );
+				var nextIdx  = existing.length;
+				var newRow   = buildConditionRow( optBase, nextIdx );
+				var container = oRow.querySelector( '.hcqb-option-cond-rows' );
+				container.insertBefore( newRow, addCondBtn );
+				initConditionRow( newRow, qRow );
+				refreshConditionalDropdowns();
+				// Show all remove buttons when >1 row.
+				if ( existing.length + 1 > 1 ) {
+					container.querySelectorAll( '.hcqb-remove-condition' ).forEach( function ( btn ) {
+						btn.style.display = '';
+					} );
+				}
 			} );
 		}
 
@@ -493,6 +585,7 @@
 		initOptionRow( oRow, qRow );
 		rebuildImageTagSelects();
 		rebuildShippingTagSelects();
+		refreshConditionalDropdowns();
 	}
 
 	function buildOptionRow( uid, qIdx, oIdx ) {
@@ -500,6 +593,11 @@
 		var row = document.createElement( 'div' );
 		row.className   = 'hcqb-repeater__row hcqb-option-row';
 		row.dataset.uid = uid;
+
+		var productOpts = '<option value="0">— Link product —</option>';
+		( HCQBAdminConfig.products || [] ).forEach( function ( p ) {
+			productOpts += '<option value="' + escAttr( String( p.id ) ) + '">' + escAttr( p.title ) + '</option>';
+		} );
 
 		row.innerHTML =
 			'<span class="hcqb-repeater__handle dashicons dashicons-menu" title="Drag to reorder"></span>' +
@@ -518,10 +616,33 @@
 				'<option value="base_price">Base Price</option>' +
 				'<option value="assembly">Assembly</option>' +
 			'</select>' +
+			'<span class="hcqb-linked-product-wrap" style="display:none">' +
+				'<select name="' + escAttr( b ) + '[linked_product_id]" class="hcqb-linked-product">' +
+					productOpts +
+				'</select>' +
+			'</span>' +
 			'<label class="hcqb-affects-image-label" title="Affects product image display">' +
 				'<input type="checkbox" name="' + escAttr( b ) + '[affects_image]" value="1" class="hcqb-affects-image-check"> Image' +
 			'</label>' +
-			'<button type="button" class="button hcqb-repeater__remove">Remove</button>';
+			'<button type="button" class="hcqb-option-cond-toggle dashicons dashicons-randomize" title="Option conditions"></button>' +
+			'<button type="button" class="button hcqb-repeater__remove">Remove</button>' +
+			'<div class="hcqb-option-cond-section" style="display:none">' +
+				'<label>' +
+					'<input type="checkbox" name="' + escAttr( b ) + '[is_conditional]" value="1" class="hcqb-option-is-conditional-check"> Show only when…' +
+				'</label>' +
+				'<div class="hcqb-option-cond-rows hcqb-hidden">' +
+					'<div class="hcqb-condition-row">' +
+						'<select name="' + escAttr( b ) + '[show_when_conditions][0][question]" class="hcqb-show-when-question">' +
+							'<option value="">— Select question —</option>' +
+						'</select>' +
+						'<select name="' + escAttr( b ) + '[show_when_conditions][0][option]" class="hcqb-show-when-option">' +
+							'<option value="">— Select option —</option>' +
+						'</select>' +
+						'<button type="button" class="button hcqb-remove-condition" style="display:none;">Remove</button>' +
+					'</div>' +
+					'<button type="button" class="button hcqb-option-add-condition">+ AND Condition</button>' +
+				'</div>' +
+			'</div>';
 
 		return row;
 	}
@@ -614,6 +735,21 @@
 		var savedOptVal = swoSelect.value;
 		swoSelect.innerHTML = '<option value="">— Select option —</option>';
 		if ( ! targetKey ) return;
+
+		// Special meta-options for empty / not-empty checks (question-level only).
+		if ( condRow.closest( '.hcqb-conditional-fields' ) ) {
+			var anyOpt   = document.createElement( 'option' );
+			anyOpt.value = '__any__';
+			anyOpt.textContent = '\u2713 Has any value';
+			if ( '__any__' === savedOptVal ) anyOpt.selected = true;
+			swoSelect.appendChild( anyOpt );
+
+			var emptyOpt   = document.createElement( 'option' );
+			emptyOpt.value = '__empty__';
+			emptyOpt.textContent = '\u2717 Is empty';
+			if ( '__empty__' === savedOptVal ) emptyOpt.selected = true;
+			swoSelect.appendChild( emptyOpt );
+		}
 
 		// Find the target question row by its key.
 		var targetQRow = null;
@@ -1242,11 +1378,21 @@
 				} );
 			} );
 
-			// Pass 3: reindex the condition index within this question.
-			var condRows = qRow.querySelectorAll( '.hcqb-condition-row' );
-			condRows.forEach( function ( condRow, cIdx ) {
+			// Pass 3: reindex QUESTION-level condition indices only.
+			var qCondRows = qRow.querySelectorAll( '.hcqb-conditional-fields > .hcqb-condition-row' );
+			qCondRows.forEach( function ( condRow, cIdx ) {
 				condRow.querySelectorAll( '[name]' ).forEach( function ( el ) {
 					el.name = el.name.replace( /\[show_when_conditions\]\[\d+\]/, '[show_when_conditions][' + cIdx + ']' );
+				} );
+			} );
+
+			// Pass 4: reindex OPTION-level condition indices.
+			oRows.forEach( function ( oRow ) {
+				var oCondRows = oRow.querySelectorAll( '.hcqb-option-cond-rows > .hcqb-condition-row' );
+				oCondRows.forEach( function ( condRow, cIdx ) {
+					condRow.querySelectorAll( '[name]' ).forEach( function ( el ) {
+						el.name = el.name.replace( /\[show_when_conditions\]\[\d+\]/, '[show_when_conditions][' + cIdx + ']' );
+					} );
 				} );
 			} );
 		} );

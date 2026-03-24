@@ -31,7 +31,7 @@ class HCQB_Email {
 		$customer_name = self::customer_name( $data );
 
 		$raw_subject = hcqb_get_setting( 'admin_email_subject' ) ?: 'New Quote Request';
-		$subject     = self::replace_tokens( $raw_subject, $customer_name );
+		$subject     = self::replace_tokens( $raw_subject, $customer_name, $data['product_name'] ?? '' );
 
 		$headers = self::build_headers( $from_name, $from_email );
 		$body    = self::build_admin_body( $post_id, $data, $customer_name );
@@ -50,7 +50,7 @@ class HCQB_Email {
 		$customer_name = self::customer_name( $data );
 
 		$raw_subject = hcqb_get_setting( 'customer_email_subject' ) ?: 'Your Quote Request';
-		$subject     = self::replace_tokens( $raw_subject, $customer_name );
+		$subject     = self::replace_tokens( $raw_subject, $customer_name, $data['product_name'] ?? '' );
 
 		$headers = self::build_headers( $from_name, $from_email );
 		$body    = self::build_customer_body( $post_id, $data, $customer_name );
@@ -66,8 +66,12 @@ class HCQB_Email {
 		return trim( $data['prefix'] . ' ' . $data['first_name'] . ' ' . $data['last_name'] );
 	}
 
-	private static function replace_tokens( string $subject, string $customer_name ): string {
-		return str_replace( '{customer_name}', $customer_name, $subject );
+	private static function replace_tokens( string $subject, string $customer_name, string $product_name = '' ): string {
+		return str_replace(
+			[ '{customer_name}', '{product_name}' ],
+			[ $customer_name,    $product_name ],
+			$subject
+		);
 	}
 
 	private static function build_headers( string $from_name, string $from_email ): array {

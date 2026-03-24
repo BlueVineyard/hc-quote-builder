@@ -79,6 +79,14 @@ class HCQB_Submission {
 			$q_labels[ $q['key'] ] = $q['label'] ?? $q['key'];
 		}
 
+		// Build slug → option_role lookup from config questions.
+		$role_by_slug = [];
+		foreach ( $questions as $q ) {
+			foreach ( $q['options'] ?? [] as $opt ) {
+				$role_by_slug[ $opt['slug'] ] = $opt['option_role'] ?? 'standard';
+			}
+		}
+
 		// Normalise selections to label snapshots (DEVELOPMENT.md §8 + §15.3).
 		// Radio/dropdown arrive as single { slug, label, price, priceType }.
 		// Checkbox arrives as an indexed array of the same objects.
@@ -104,6 +112,7 @@ class HCQB_Submission {
 					'option_label'   => sanitize_text_field( $entry['label'] ?? $entry['slug'] ),
 					'price'          => (float) ( $entry['price'] ?? 0 ),
 					'price_type'     => $price_type,
+					'option_role'    => $role_by_slug[ sanitize_key( $entry['slug'] ?? '' ) ] ?? 'standard',
 				];
 			}
 		}
@@ -120,6 +129,16 @@ class HCQB_Submission {
 			}
 		}
 
+		// Build slug → linked_product_id map for base_price options.
+		$linked_by_slug = [];
+		foreach ( $questions as $q ) {
+			foreach ( $q['options'] ?? [] as $opt ) {
+				if ( ( $opt['option_role'] ?? '' ) === 'base_price' && ! empty( $opt['linked_product_id'] ) ) {
+					$linked_by_slug[ $opt['slug'] ] = absint( $opt['linked_product_id'] );
+				}
+			}
+		}
+
 		// Extract base_price from the matching question — keep ALL entries in the list
 		// so every question answer is captured in the submission record.
 		$base_price   = 0.0;
@@ -128,6 +147,20 @@ class HCQB_Submission {
 			if ( in_array( $entry['question_label'], $base_price_q_labels, true ) ) {
 				$base_price   = (float) $entry['price'];
 				$product_name = $entry['option_label'];
+			}
+		}
+
+		// If the selected base_price option links to a product, use the product title.
+		foreach ( $selections as $key => $selection ) {
+			$q_label = sanitize_text_field( $q_labels[ $key ] ?? $key );
+			if ( in_array( $q_label, $base_price_q_labels, true ) ) {
+				$slug = sanitize_key( $selection['slug'] ?? '' );
+				if ( $slug && isset( $linked_by_slug[ $slug ] ) ) {
+					$linked = get_post( $linked_by_slug[ $slug ] );
+					if ( $linked && 'publish' === $linked->post_status ) {
+						$product_name = $linked->post_title;
+					}
+				}
 			}
 		}
 

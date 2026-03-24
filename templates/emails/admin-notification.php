@@ -36,16 +36,17 @@ Address:  <?php echo $full_address . "\n"; ?>
 
 QUOTE SUMMARY
 
+Product: <?php echo ( $data['product_name'] ?? '' ) ?: 'N/A'; echo "\n"; ?>
+Base Price: <?php echo hcqb_format_price( $base_price ) . "\n"; ?>
+
 Selected Options:
 <?php foreach ( $data['selected_options'] as $opt ) :
+	if ( 'base_price' === ( $opt['option_role'] ?? '' ) ) { continue; }
 	$sign      = 'deduction' === $opt['price_type'] ? '-' : '+';
 	$price_str = $opt['price'] > 0 ? '  ' . $sign . hcqb_format_price( $opt['price'] ) : '';
 ?>
-  <?php echo $opt['question_label'] . "\n"; ?>
-  <?php echo $opt['option_label'] . $price_str . "\n"; ?>
+  <?php echo $opt['question_label'] . ': ' . $opt['option_label'] . $price_str . "\n"; ?>
 <?php endforeach; ?>
-
-Base Price:   <?php echo hcqb_format_price( $base_price ) . "\n"; ?>
 
 <?php echo str_repeat( '-', 52 ) . "\n"; ?>
 TOTAL ESTIMATE:   <?php echo hcqb_format_price( $data['total_price'] ) . "\n"; ?>

@@ -100,6 +100,15 @@
 	min-width: 180px;
 }
 
+.hcqb-condition-logic-wrap {
+	flex-basis: 100%;
+	margin-bottom: 4px;
+}
+
+.hcqb-condition-logic {
+	min-width: 260px;
+}
+
 /* =============================================================================
    Options repeater (nested within each question)
    ============================================================================= */
@@ -144,6 +153,57 @@
 
 .hcqb-option-row .hcqb-option-role {
 	width: auto;
+}
+
+.hcqb-linked-product-wrap select {
+	width: auto;
+	max-width: 200px;
+}
+
+/* Option-level conditions */
+.hcqb-option-cond-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	cursor: pointer;
+	color: var(--hcqb-muted, #646970);
+	background: #f6f7f7;
+	border: 1px solid var(--hcqb-border, #c3c4c7);
+	border-radius: 4px;
+	flex-shrink: 0;
+	font-size: 14px;
+	line-height: 1;
+	transition: all 0.15s ease;
+}
+.hcqb-option-cond-toggle:hover {
+	color: var(--hcqb-brand, #2271b1);
+	border-color: var(--hcqb-brand, #2271b1);
+	background: #fff;
+}
+.hcqb-option-cond-toggle.active {
+	color: #fff;
+	background: var(--hcqb-brand, #2271b1);
+	border-color: var(--hcqb-brand, #2271b1);
+}
+
+.hcqb-option-cond-section {
+	flex-basis: 100%;
+	padding: 8px 0 4px 28px;
+	border-top: 1px dashed var(--hcqb-border);
+	margin-top: 6px;
+}
+
+.hcqb-option-cond-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.hcqb-option-cond-rows select {
+	min-width: 160px;
 }
 
 .hcqb-affects-image-label {
