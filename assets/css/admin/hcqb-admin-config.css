@@ -343,6 +343,17 @@
 	cursor: pointer;
 }
 
+.hcqb-csv-format-hint {
+	background: #f6f7f7;
+	border: 1px solid var(--hcqb-border, #ddd);
+	border-radius: 3px;
+	padding: 8px 12px;
+	font-size: 12px;
+	white-space: pre-wrap;
+	word-break: break-all;
+	margin: 6px 0 10px;
+}
+
 .hcqb-gen-q-label em {
 	color: var(--hcqb-muted);
 	font-style: normal;

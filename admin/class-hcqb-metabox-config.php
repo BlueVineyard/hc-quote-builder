@@ -535,6 +535,9 @@ class HCQB_Metabox_Config {
 			<button type="button" class="button" id="hcqb-generate-image-rules">
 				&#x21ba; Generate Combinations
 			</button>
+			<button type="button" class="button" id="hcqb-import-csv-rules">
+				&#x2B07; Import CSV
+			</button>
 		</div>
 		<script>window.hcqbTagOptions = <?php echo wp_json_encode( $tag_options ); ?>;</script>
 		<?php
@@ -1202,6 +1205,109 @@ class HCQB_Metabox_Config {
 
 		update_post_meta( $post_id, 'hcqb_questions', $clean );
 		wp_send_json_success( [ 'message' => 'Questions imported successfully. Reloading...' ] );
+	}
+
+	// =========================================================================
+	// AJAX — Import image rules from CSV
+	// =========================================================================
+
+	public static function handle_import_image_rules_csv(): void {
+		check_ajax_referer( 'hcqb_import_json', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( [ 'message' => 'Permission denied.' ], 403 );
+		}
+
+		$post_id = absint( $_POST['post_id'] ?? 0 );
+		if ( ! $post_id || get_post_type( $post_id ) !== 'hc-quote-configs' ) {
+			wp_send_json_error( [ 'message' => 'Invalid config post.' ] );
+		}
+
+		$csv_text = wp_unslash( $_POST['csv'] ?? '' );
+		if ( ! $csv_text ) {
+			wp_send_json_error( [ 'message' => 'No CSV data provided.' ] );
+		}
+
+		$valid_views = [ 'front', 'side', 'back', 'interior' ];
+		$lines       = preg_split( '/\r\n|\r|\n/', trim( $csv_text ) );
+		$errors      = [];
+		$new_rules   = [];
+
+		// Check for header row and skip it.
+		$first = strtolower( trim( $lines[0] ?? '' ) );
+		if ( str_contains( $first, 'match_tags' ) || str_contains( $first, 'image_url' ) ) {
+			array_shift( $lines );
+		}
+
+		foreach ( $lines as $line_num => $line ) {
+			$row_num = $line_num + 2; // 1-based + header offset.
+			$line    = trim( $line );
+			if ( '' === $line ) {
+				continue;
+			}
+
+			// Parse CSV line (handle quoted fields).
+			$fields = str_getcsv( $line );
+			$tags_raw  = trim( $fields[0] ?? '' );
+			$image_url = trim( $fields[1] ?? '' );
+			$view      = sanitize_key( trim( $fields[2] ?? 'front' ) );
+
+			if ( ! $tags_raw ) {
+				$errors[] = 'Row ' . $row_num . ': No match tags provided.';
+				continue;
+			}
+			if ( ! $image_url ) {
+				$errors[] = 'Row ' . $row_num . ': No image URL provided.';
+				continue;
+			}
+
+			// Resolve URL → attachment ID.
+			$attachment_id = attachment_url_to_postid( $image_url );
+			if ( ! $attachment_id ) {
+				$errors[] = 'Row ' . $row_num . ': Image URL not found in media library.';
+				continue;
+			}
+
+			// Parse tags.
+			$tags = array_values( array_filter( array_map( 'sanitize_key', explode( '|', $tags_raw ) ) ) );
+			if ( empty( $tags ) ) {
+				$errors[] = 'Row ' . $row_num . ': No valid tags after parsing.';
+				continue;
+			}
+
+			if ( ! in_array( $view, $valid_views, true ) ) {
+				$view = 'front';
+			}
+
+			$new_rules[] = [
+				'match_tags'    => $tags,
+				'attachment_id' => $attachment_id,
+				'view'          => $view,
+			];
+		}
+
+		if ( empty( $new_rules ) ) {
+			wp_send_json_error( [
+				'message' => 'No valid rules found in CSV.',
+				'errors'  => $errors,
+			] );
+		}
+
+		// Merge with existing rules.
+		$existing = get_post_meta( $post_id, 'hcqb_image_rules', true );
+		if ( ! is_array( $existing ) ) {
+			$existing = [];
+		}
+
+		$merged = array_merge( $existing, $new_rules );
+		update_post_meta( $post_id, 'hcqb_image_rules', $merged );
+
+		wp_send_json_success( [
+			'message'  => sprintf( '%d rule(s) imported successfully.', count( $new_rules ) ),
+			'imported' => count( $new_rules ),
+			'skipped'  => count( $errors ),
+			'errors'   => $errors,
+		] );
 	}
 
 }

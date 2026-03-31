@@ -321,9 +321,10 @@ class HCQB_Shortcodes {
 		wp_enqueue_style( 'hcqb-product-page' );
 		wp_enqueue_script( 'hcqb-gallery' );
 
-		$main_id   = $ids[0];
-		$main_url  = wp_get_attachment_image_url( $main_id, $atts['size'] );
-		$main_alt  = trim( (string) get_post_meta( $main_id, '_wp_attachment_image_alt', true ) );
+		$main_id    = $ids[0];
+		$main_url   = wp_get_attachment_image_url( $main_id, $atts['size'] );
+		$main_full  = wp_get_attachment_image_url( $main_id, 'full' );
+		$main_alt   = trim( (string) get_post_meta( $main_id, '_wp_attachment_image_alt', true ) );
 		$has_thumbs = count( $ids ) > 1;
 		$title      = get_the_title( $post_id );
 
@@ -338,11 +339,13 @@ class HCQB_Shortcodes {
 						<?php foreach ( $ids as $img_id ) :
 							$thumb_url = wp_get_attachment_image_url( $img_id, $atts['thumb_size'] );
 							$full_url  = wp_get_attachment_image_url( $img_id, $atts['size'] );
+							$zoom_url  = wp_get_attachment_image_url( $img_id, 'full' );
 							$alt       = trim( (string) get_post_meta( $img_id, '_wp_attachment_image_alt', true ) );
 						?>
 						<button type="button"
 						        class="hcqb-gallery-thumb swiper-slide<?php echo $img_id === $main_id ? ' hcqb-gallery-thumb--active' : ''; ?>"
 						        data-full="<?php echo esc_url( $full_url ); ?>"
+						        data-zoom="<?php echo esc_url( $zoom_url ); ?>"
 						        aria-label="View image">
 							<img src="<?php echo esc_url( $thumb_url ); ?>"
 							     alt="<?php echo esc_attr( $alt ?: $title ); ?>">
@@ -354,10 +357,11 @@ class HCQB_Shortcodes {
 				</div>
 				<?php endif; ?>
 
-				<div class="hcqb-gallery-main">
+				<div class="hcqb-gallery-main" role="button" tabindex="0" aria-label="Open image lightbox" style="cursor:zoom-in;">
 					<img src="<?php echo esc_url( $main_url ); ?>"
 					     alt="<?php echo esc_attr( $main_alt ?: $title ); ?>"
-					     class="hcqb-gallery-main__img">
+					     class="hcqb-gallery-main__img"
+					     data-zoom="<?php echo esc_url( $main_full ); ?>">
 				</div>
 
 			</div>

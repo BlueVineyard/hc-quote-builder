@@ -1351,6 +1351,144 @@
 	}
 
 	// =========================================================================
+	// CSV Import dialog for image rules
+	// =========================================================================
+
+	function openCsvImportDialog() {
+		if ( document.getElementById( 'hcqb-csv-import-dialog' ) ) return;
+
+		var wrap = document.querySelector( '.hcqb-image-rules-wrap' );
+		if ( ! wrap ) return;
+
+		var dialog = document.createElement( 'div' );
+		dialog.id        = 'hcqb-csv-import-dialog';
+		dialog.className = 'hcqb-generate-dialog';
+		dialog.innerHTML =
+			'<h3>Import Image Rules from CSV</h3>' +
+			'<p>Paste CSV content or choose a file. Format:</p>' +
+			'<pre class="hcqb-csv-format-hint">match_tags,image_url,view\nslug1|slug2|slug3,https://...image.png,front</pre>' +
+			'<p><code>match_tags</code>: pipe-separated option slugs &bull; <code>view</code>: optional (defaults to front)</p>' +
+			'<div class="hcqb-csv-input-wrap">' +
+				'<textarea id="hcqb-csv-textarea" rows="8" placeholder="Paste CSV here…" style="width:100%;font-family:monospace;font-size:12px;"></textarea>' +
+				'<div style="margin:8px 0;">' +
+					'<label class="button" style="cursor:pointer;">Choose .csv file' +
+						'<input type="file" id="hcqb-csv-file" accept=".csv,text/csv" style="display:none;">' +
+					'</label>' +
+				'</div>' +
+			'</div>' +
+			'<div id="hcqb-csv-status" style="display:none;margin:8px 0;padding:8px 12px;border-radius:4px;font-size:13px;"></div>' +
+			'<div class="hcqb-gen-actions">' +
+				'<button type="button" class="button button-primary" id="hcqb-do-csv-import">Import</button> ' +
+				'<button type="button" class="button" id="hcqb-cancel-csv-import">Cancel</button>' +
+			'</div>';
+
+		wrap.appendChild( dialog );
+
+		// File picker → read into textarea.
+		var fileInput = dialog.querySelector( '#hcqb-csv-file' );
+		fileInput.addEventListener( 'change', function () {
+			if ( ! this.files || ! this.files[0] ) return;
+			var reader = new FileReader();
+			reader.onload = function ( e ) {
+				dialog.querySelector( '#hcqb-csv-textarea' ).value = e.target.result;
+			};
+			reader.readAsText( this.files[0] );
+		} );
+
+		// Cancel.
+		dialog.querySelector( '#hcqb-cancel-csv-import' ).addEventListener( 'click', function () {
+			dialog.remove();
+		} );
+
+		// Import.
+		dialog.querySelector( '#hcqb-do-csv-import' ).addEventListener( 'click', function () {
+			var csv = dialog.querySelector( '#hcqb-csv-textarea' ).value.trim();
+			if ( ! csv ) {
+				// eslint-disable-next-line no-alert
+				alert( 'Please paste CSV content or choose a file first.' );
+				return;
+			}
+			doCsvImport( csv, dialog );
+		} );
+	}
+
+	function doCsvImport( csv, dialog ) {
+		var importBtn = dialog.querySelector( '#hcqb-do-csv-import' );
+		var status    = dialog.querySelector( '#hcqb-csv-status' );
+		importBtn.disabled    = true;
+		importBtn.textContent = 'Importing…';
+		status.style.display  = 'none';
+
+		var formData = new FormData();
+		formData.append( 'action',  'hcqb_import_image_rules_csv' );
+		formData.append( 'nonce',   HCQBAdminConfig.importNonce );
+		formData.append( 'post_id', HCQBAdminConfig.postId );
+		formData.append( 'csv',     csv );
+
+		fetch( HCQBAdminConfig.ajaxUrl, {
+			method: 'POST',
+			body:   formData,
+			credentials: 'same-origin',
+		} )
+		.then( function ( res ) { return res.json(); } )
+		.then( function ( resp ) {
+			if ( resp.success ) {
+				var msg = resp.data.message;
+				if ( resp.data.skipped ) {
+					msg += ' (' + resp.data.skipped + ' skipped)';
+				}
+				status.textContent      = msg;
+				status.style.display    = '';
+				status.style.background = '#d4edda';
+				status.style.color      = '#155724';
+
+				// Show errors if any.
+				if ( resp.data.errors && resp.data.errors.length ) {
+					var errList = document.createElement( 'ul' );
+					errList.style.cssText = 'margin:6px 0 0;padding-left:18px;font-size:12px;color:#856404;';
+					resp.data.errors.forEach( function ( e ) {
+						var li = document.createElement( 'li' );
+						li.textContent = e;
+						errList.appendChild( li );
+					} );
+					status.appendChild( errList );
+				}
+
+				// Reload after short delay so user sees the result.
+				setTimeout( function () { location.reload(); }, 1500 );
+			} else {
+				var errMsg = resp.data.message || 'Import failed.';
+				status.textContent      = errMsg;
+				status.style.display    = '';
+				status.style.background = '#f8d7da';
+				status.style.color      = '#721c24';
+
+				if ( resp.data.errors && resp.data.errors.length ) {
+					var errList2 = document.createElement( 'ul' );
+					errList2.style.cssText = 'margin:6px 0 0;padding-left:18px;font-size:12px;';
+					resp.data.errors.forEach( function ( e ) {
+						var li = document.createElement( 'li' );
+						li.textContent = e;
+						errList2.appendChild( li );
+					} );
+					status.appendChild( errList2 );
+				}
+
+				importBtn.disabled    = false;
+				importBtn.textContent = 'Import';
+			}
+		} )
+		.catch( function ( err ) {
+			status.textContent      = 'Network error: ' + err.message;
+			status.style.display    = '';
+			status.style.background = '#f8d7da';
+			status.style.color      = '#721c24';
+			importBtn.disabled    = false;
+			importBtn.textContent = 'Import';
+		} );
+	}
+
+	// =========================================================================
 	// Form reindexing — called right before submit
 	//
 	// Normalises all array indices in name attributes to sequential DOM order
@@ -1435,6 +1573,10 @@
 		var genBtn = document.getElementById( 'hcqb-generate-image-rules' );
 		if ( genBtn ) {
 			genBtn.addEventListener( 'click', openGenerateDialog );
+		}
+		var csvBtn = document.getElementById( 'hcqb-import-csv-rules' );
+		if ( csvBtn ) {
+			csvBtn.addEventListener( 'click', openCsvImportDialog );
 		}
 
 		// Shipping rules.
