@@ -6,8 +6,12 @@
  * Registers window.hcqbMapsInit as the async callback for the Google Maps API
  * script. When the API is ready it:
  *   - Attaches Places Autocomplete to #hcqb-address-search
- *   - On place_changed: parses address components → fills read-only fields,
+ *   - On place_changed: parses address components → fills the address fields,
  *     hidden lat/lng inputs, auto-selects the phone prefix, calls Distance Matrix
+ *   - Address fields are also editable by hand (fallback when the search box
+ *     fails). A manual edit clears the now-stale coordinates/marker/distance and
+ *     re-runs Distance Matrix against the typed address string. This listener is
+ *     bound on DOMContentLoaded, independent of the Maps API loading at all.
  *   - Initialises a Google Map centred on the warehouse location
  *   - Listens to hcqb:frame-2-shown to trigger a map resize (layout flush)
  *
@@ -23,9 +27,18 @@
 	// Dial code lookup — must mirror $phone_prefix_map in frame-2-contact.php.
 	var PHONE_PREFIXES = { AU: '+61', NZ: '+64' };
 
+	// Country names appended to manually typed addresses for Distance Matrix.
+	var COUNTRY_NAMES = { AU: 'Australia', NZ: 'New Zealand' };
+
+	// Editable address fields — order matters for building the address string.
+	var ADDRESS_FIELD_IDS = [ 'hcqb-street', 'hcqb-suburb', 'hcqb-state', 'hcqb-postcode' ];
+
 	// Internal references set once the Maps API is ready.
 	var map            = null;
 	var customerMarker = null;
+
+	// Incremented per request/edit so late Distance Matrix responses are ignored.
+	var distanceRequestId = 0;
 
 	// -------------------------------------------------------------------------
 	// hcqbMapsInit — called by the Google Maps API as its async callback.
@@ -79,6 +92,52 @@
 			updateMap( place.geometry.location );
 			calculateDistance( place.geometry.location );
 		} );
+	}
+
+	// -------------------------------------------------------------------------
+	// Manual address entry
+	// Bound on DOMContentLoaded so it works even if the Maps API never loads.
+	// setField() assigns .value directly, which fires no input/change events,
+	// so Places auto-fill never triggers these handlers.
+	// -------------------------------------------------------------------------
+
+	document.addEventListener( 'DOMContentLoaded', function () {
+		ADDRESS_FIELD_IDS.forEach( function ( id ) {
+			var el = document.getElementById( id );
+			if ( ! el ) { return; }
+			el.addEventListener( 'input',  onManualAddressInput );
+			el.addEventListener( 'change', onManualAddressChange );
+		} );
+	} );
+
+	// Any keystroke invalidates the Places result the fields were filled from.
+	function onManualAddressInput() {
+		setField( 'hcqb-lat', '' );
+		setField( 'hcqb-lng', '' );
+		if ( customerMarker ) {
+			customerMarker.setMap( null );
+			customerMarker = null;
+		}
+		clearDistance();
+	}
+
+	// On commit (blur after edit), estimate distance from the typed address.
+	function onManualAddressChange() {
+		var suburb   = fieldValue( 'hcqb-suburb' );
+		var postcode = fieldValue( 'hcqb-postcode' );
+
+		// Not enough to locate the address yet.
+		if ( ! suburb && ! postcode ) { return; }
+		if ( ! window.google || ! google.maps || ! google.maps.DistanceMatrixService ) { return; }
+
+		var parts = ADDRESS_FIELD_IDS.map( fieldValue ).filter( Boolean );
+
+		var countries = ( ( window.HCQBLocale || {} ).supportedCountries || [ 'AU' ] );
+		if ( 1 === countries.length && COUNTRY_NAMES[ countries[ 0 ] ] ) {
+			parts.push( COUNTRY_NAMES[ countries[ 0 ] ] );
+		}
+
+		calculateDistance( parts.join( ', ' ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -182,6 +241,8 @@
 
 	// -------------------------------------------------------------------------
 	// Distance Matrix
+	// destination: a LatLng (Places result) or an address string (manual entry).
+	// Any failure clears the distance so a stale value is never submitted.
 	// -------------------------------------------------------------------------
 
 	function calculateDistance( destination ) {
@@ -191,7 +252,8 @@
 		var warehouseLng = parseFloat( locale.warehouseLng );
 		if ( ! warehouseLat || ! warehouseLng ) { return; }
 
-		var service = new google.maps.DistanceMatrixService();
+		var requestId = ++distanceRequestId;
+		var service   = new google.maps.DistanceMatrixService();
 		service.getDistanceMatrix(
 			{
 				origins:      [ new google.maps.LatLng( warehouseLat, warehouseLng ) ],
@@ -200,9 +262,10 @@
 				unitSystem:   google.maps.UnitSystem.METRIC,
 			},
 			function ( response, status ) {
-				if ( status !== 'OK' ) { return; }
+				if ( requestId !== distanceRequestId ) { return; }
+				if ( status !== 'OK' ) { clearDistance(); return; }
 				var element = response.rows[ 0 ].elements[ 0 ];
-				if ( element.status !== 'OK' ) { return; }
+				if ( element.status !== 'OK' ) { clearDistance(); return; }
 				setField( 'hcqb-distance', element.distance.text );
 
 				// Dispatch numeric distance for shipping cost calculation.
@@ -214,6 +277,16 @@
 		);
 	}
 
+	// Reset distance + shipping estimate (hcqb-shipping.js hides at 0 km).
+	// Also invalidates any in-flight Distance Matrix request.
+	function clearDistance() {
+		distanceRequestId++;
+		setField( 'hcqb-distance', '' );
+		document.dispatchEvent( new CustomEvent( 'hcqb:distance-changed', {
+			detail: { distanceKm: 0, distanceText: '' },
+		} ) );
+	}
+
 	// -------------------------------------------------------------------------
 	// Utility
 	// -------------------------------------------------------------------------
@@ -221,6 +294,11 @@
 	function setField( id, value ) {
 		var el = document.getElementById( id );
 		if ( el ) { el.value = value; }
+	}
+
+	function fieldValue( id ) {
+		var el = document.getElementById( id );
+		return el ? el.value.trim() : '';
 	}
 
 }() );

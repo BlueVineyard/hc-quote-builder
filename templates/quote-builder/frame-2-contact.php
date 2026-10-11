@@ -195,7 +195,7 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 						       autocomplete="off"
 						       placeholder="Start typing to search your delivery address…">
 					</div>
-					<p class="hcqb-form-hint">Select a result to auto-fill the fields below.</p>
+					<p class="hcqb-form-hint">Select a result to auto-fill the fields below, or type your address into them directly.</p>
 				</div>
 			</div>
 		</div><!-- .hcqb-form-section -->
@@ -206,7 +206,7 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 		<div class="hcqb-form-section">
 			<p class="hcqb-form-section__title">Delivery Address</p>
 
-			<?php // Hidden coordinates — populated by Places result ?>
+			<?php // Hidden coordinates — populated by Places result, cleared on manual edit ?>
 			<input type="hidden" id="hcqb-lat" name="lat">
 			<input type="hidden" id="hcqb-lng" name="lng">
 
@@ -223,7 +223,7 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 						       id="hcqb-street"
 						       name="street"
 						       class="hcqb-form-input"
-						       readonly>
+						       autocomplete="address-line1">
 					</div>
 				</div>
 				<div class="hcqb-form-group">
@@ -234,7 +234,7 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 						       id="hcqb-suburb"
 						       name="suburb"
 						       class="hcqb-form-input"
-						       readonly>
+						       autocomplete="address-level2">
 					</div>
 				</div>
 				<div class="hcqb-form-group">
@@ -245,7 +245,7 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 						       id="hcqb-state"
 						       name="state"
 						       class="hcqb-form-input"
-						       readonly>
+						       autocomplete="address-level1">
 					</div>
 				</div>
 			</div>
@@ -260,7 +260,8 @@ $phone_prefix_map = [ 'AU' => '+61', 'NZ' => '+64' ];
 						       id="hcqb-postcode"
 						       name="postcode"
 						       class="hcqb-form-input"
-						       readonly>
+						       autocomplete="postal-code"
+						       inputmode="numeric">
 					</div>
 				</div>
 			</div>
