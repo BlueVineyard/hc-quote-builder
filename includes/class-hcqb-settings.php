@@ -162,6 +162,9 @@ class HCQB_Settings {
 	private static function render_tab_general( array $settings, string $active_tab ): void {
 		$visible             = $active_tab === 'general';
 		$api_key             = $settings['google_maps_api_key'] ?? '';
+		$api_account_email   = $settings['google_api_account_email'] ?? '';
+		$api_project_id      = $settings['google_api_project_id']    ?? '';
+		$api_console_url     = self::google_console_url( $api_account_email, $api_project_id );
 		$supported_countries = $settings['supported_countries'] ?? [ 'AU' ];
 		$available_countries = [
 			'AU' => 'Australia',
@@ -191,6 +194,39 @@ class HCQB_Settings {
 						       class="regular-text"
 						       autocomplete="off">
 						<p class="description">Required. Restrict this key to your domain in the Google Cloud Console.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="hcqb_google_api_account_email">API Key Account</label>
+					</th>
+					<td>
+						<input type="email"
+						       id="hcqb_google_api_account_email"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[google_api_account_email]"
+						       value="<?php echo esc_attr( $api_account_email ); ?>"
+						       class="regular-text"
+						       placeholder="Google account email">
+						<p class="description">The Google account that owns the API key above. For reference only — not used by the quote builder.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="hcqb_google_api_project_id">Google Cloud Project ID</label>
+					</th>
+					<td>
+						<input type="text"
+						       id="hcqb_google_api_project_id"
+						       name="<?php echo esc_attr( self::OPTION_KEY ); ?>[google_api_project_id]"
+						       value="<?php echo esc_attr( $api_project_id ); ?>"
+						       class="regular-text"
+						       placeholder="e.g. hc-containers-123456">
+						<p class="description">
+							The project ID shown in the Google Cloud Console project picker (not the project name).
+							<?php if ( $api_console_url ) : ?>
+								<br><a href="<?php echo esc_url( $api_console_url ); ?>" target="_blank" rel="noopener noreferrer">Open API credentials in Google Cloud Console &#8599;</a>
+							<?php endif; ?>
+						</p>
 					</td>
 				</tr>
 				<tr>
@@ -1211,6 +1247,9 @@ class HCQB_Settings {
 
 		// ---- Tab 1 — General ----
 		$clean['google_maps_api_key'] = sanitize_text_field( $raw['google_maps_api_key'] ?? '' );
+		$clean['google_api_account_email'] = sanitize_email( $raw['google_api_account_email'] ?? '' );
+		// Google Cloud project IDs: lowercase letters, digits and hyphens only.
+		$clean['google_api_project_id']    = preg_replace( '/[^a-z0-9-]/', '', strtolower( sanitize_text_field( $raw['google_api_project_id'] ?? '' ) ) );
 		$clean['warehouse_address']   = sanitize_text_field( $raw['warehouse_address']   ?? '' );
 		$clean['warehouse_lat']       = sanitize_text_field( $raw['warehouse_lat']       ?? '' );
 		$clean['warehouse_lng']       = sanitize_text_field( $raw['warehouse_lng']       ?? '' );
@@ -1298,10 +1337,29 @@ class HCQB_Settings {
 	// Default values — used on first-ever save and as fallback via wp_parse_args
 	// -------------------------------------------------------------------------
 
+	/**
+	 * Build a Google Cloud Console link to the API credentials page.
+	 *
+	 * authuser switches the console to the given Google account; project
+	 * selects the project. Returns '' when neither is set.
+	 */
+	private static function google_console_url( string $email, string $project_id ): string {
+		if ( ! $email && ! $project_id ) {
+			return '';
+		}
+		$args = array_filter( [
+			'project'  => $project_id,
+			'authuser' => $email,
+		] );
+		return add_query_arg( array_map( 'rawurlencode', $args ), 'https://console.cloud.google.com/apis/credentials' );
+	}
+
 	private static function defaults(): array {
 		return [
 			// General
 			'google_maps_api_key' => '',
+			'google_api_account_email' => '',
+			'google_api_project_id'    => '',
 			'warehouse_address'   => '',
 			'warehouse_lat'       => '',
 			'warehouse_lng'       => '',
