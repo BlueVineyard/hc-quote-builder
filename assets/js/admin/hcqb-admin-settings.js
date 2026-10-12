@@ -173,6 +173,45 @@
 		// Once the Maps API loads we know a key exists, so unlock it.
 		addressInput.removeAttribute( 'readonly' );
 
+		if ( typeof google.maps.importLibrary !== 'function' ) {
+			initLegacyWarehouseAutocomplete( addressInput );
+			return;
+		}
+
+		google.maps.importLibrary( 'places' ).then( function ( places ) {
+			if ( ! places.PlaceAutocompleteElement ) {
+				initLegacyWarehouseAutocomplete( addressInput );
+				return;
+			}
+
+			// Places API (New) element renders its own input, so it sits above
+			// the saved-value text field, which stays as the submitted value.
+			const element = new places.PlaceAutocompleteElement();
+			element.setAttribute( 'aria-label', 'Search warehouse address' );
+			element.style.display      = 'block';
+			element.style.maxWidth     = '25em';
+			element.style.marginBottom = '6px';
+			element.style.colorScheme  = 'light';
+			addressInput.before( element );
+
+			element.addEventListener( 'gmp-select', function ( e ) {
+				if ( ! e.placePrediction ) return;
+				const place = e.placePrediction.toPlace();
+				place.fetchFields( { fields: [ 'formattedAddress', 'location' ] } ).then( function () {
+					if ( ! place.location ) return;
+					addressInput.value = place.formattedAddress || addressInput.value;
+					setWarehouseCoords( place.location.lat(), place.location.lng() );
+				} ).catch( function () {} );
+			} );
+		} ).catch( function () {
+			initLegacyWarehouseAutocomplete( addressInput );
+		} );
+	};
+
+	// Legacy Places Autocomplete (deprecated March 2025) — fallback only.
+	function initLegacyWarehouseAutocomplete( addressInput ) {
+		if ( ! google.maps.places || ! google.maps.places.Autocomplete ) return;
+
 		const autocomplete = new google.maps.places.Autocomplete( addressInput, {
 			types: [ 'geocode' ],
 		} );
@@ -180,17 +219,17 @@
 		autocomplete.addListener( 'place_changed', function () {
 			const place = autocomplete.getPlace();
 			if ( ! place || ! place.geometry ) return;
-
-			const lat = place.geometry.location.lat();
-			const lng = place.geometry.location.lng();
-
-			const latField = document.getElementById( 'hcqb_warehouse_lat' );
-			const lngField = document.getElementById( 'hcqb_warehouse_lng' );
-
-			if ( latField ) latField.value = lat;
-			if ( lngField ) lngField.value = lng;
+			setWarehouseCoords( place.geometry.location.lat(), place.geometry.location.lng() );
 		} );
-	};
+	}
+
+	function setWarehouseCoords( lat, lng ) {
+		const latField = document.getElementById( 'hcqb_warehouse_lat' );
+		const lngField = document.getElementById( 'hcqb_warehouse_lng' );
+
+		if ( latField ) latField.value = lat;
+		if ( lngField ) lngField.value = lng;
+	}
 
 	// -------------------------------------------------------------------------
 	// Boot

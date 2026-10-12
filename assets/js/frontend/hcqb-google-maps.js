@@ -5,8 +5,10 @@
  *
  * Registers window.hcqbMapsInit as the async callback for the Google Maps API
  * script. When the API is ready it:
- *   - Attaches Places Autocomplete to #hcqb-address-search
- *   - On place_changed: parses address components → fills the address fields,
+ *   - Adds a custom suggestion dropdown to #hcqb-address-search backed by the
+ *     Places API (New) AutocompleteSuggestion service; falls back to the
+ *     legacy Places Autocomplete if that service is unavailable
+ *   - On place selection: parses address components → fills the address fields,
  *     hidden lat/lng inputs, auto-selects the phone prefix, calls Distance Matrix
  *   - Address fields are also editable by hand (fallback when the search box
  *     fails). A manual edit clears the now-stale coordinates/marker/distance and
@@ -74,24 +76,218 @@
 		var searchInput = document.getElementById( 'hcqb-address-search' );
 		if ( ! searchInput ) { return; }
 
-		var locale   = window.HCQBLocale || {};
+		var locale    = window.HCQBLocale || {};
 		var countries = ( locale.supportedCountries || [ 'AU' ] ).map( function ( c ) {
 			return c.toLowerCase();
 		} );
 
+		if ( typeof google.maps.importLibrary !== 'function' ) {
+			initLegacyAutocomplete( searchInput, countries );
+			return;
+		}
+
+		google.maps.importLibrary( 'places' ).then( function ( places ) {
+			if ( ! places.AutocompleteSuggestion ) {
+				initLegacyAutocomplete( searchInput, countries );
+				return;
+			}
+			initSuggestionAutocomplete( places, searchInput, countries );
+		} ).catch( function () {
+			initLegacyAutocomplete( searchInput, countries );
+		} );
+	}
+
+	// Places API (New) — data-only AutocompleteSuggestion service rendered into
+	// our own dropdown, so the search box keeps the form's native input styling
+	// (the PlaceAutocompleteElement web component can't be themed to match).
+	function initSuggestionAutocomplete( places, input, countries ) {
+		var wrap = input.closest( '.hcqb-field-wrap' ) || input.parentElement;
+
+		var list = document.createElement( 'ul' );
+		list.id        = 'hcqb-address-suggestions';
+		list.className = 'hcqb-ac-list';
+		list.setAttribute( 'role', 'listbox' );
+		list.hidden = true;
+		wrap.appendChild( list );
+
+		input.setAttribute( 'role', 'combobox' );
+		input.setAttribute( 'aria-autocomplete', 'list' );
+		input.setAttribute( 'aria-expanded', 'false' );
+		input.setAttribute( 'aria-controls', list.id );
+
+		var predictions  = [];
+		var activeIndex  = -1;
+		var sessionToken = null;
+		var debounce     = null;
+		var requestId    = 0;
+
+		input.addEventListener( 'input', function () {
+			clearTimeout( debounce );
+			var query = input.value.trim();
+			if ( query.length < 3 ) { close(); return; }
+			debounce = setTimeout( function () { fetchSuggestions( query ); }, 200 );
+		} );
+
+		input.addEventListener( 'keydown', function ( e ) {
+			if ( list.hidden ) { return; }
+			if ( 'ArrowDown' === e.key ) {
+				e.preventDefault();
+				setActive( ( activeIndex + 1 ) % predictions.length );
+			} else if ( 'ArrowUp' === e.key ) {
+				e.preventDefault();
+				setActive( activeIndex <= 0 ? predictions.length - 1 : activeIndex - 1 );
+			} else if ( 'Enter' === e.key ) {
+				// Keep Enter from submitting the quote form while choosing.
+				e.preventDefault();
+				select( activeIndex >= 0 ? activeIndex : 0 );
+			} else if ( 'Escape' === e.key ) {
+				close();
+			}
+		} );
+
+		input.addEventListener( 'blur', function () {
+			// Delay so a click on a suggestion lands before the list closes.
+			setTimeout( close, 150 );
+		} );
+
+		// mousedown (not click) fires before blur and keeps focus in the input.
+		list.addEventListener( 'mousedown', function ( e ) {
+			var item = e.target.closest( '.hcqb-ac-item' );
+			if ( ! item ) { return; }
+			e.preventDefault();
+			select( Number( item.dataset.index ) );
+		} );
+
+		function fetchSuggestions( query ) {
+			if ( ! sessionToken ) {
+				sessionToken = new places.AutocompleteSessionToken();
+			}
+			var thisRequest = ++requestId;
+
+			places.AutocompleteSuggestion.fetchAutocompleteSuggestions( {
+				input:               query,
+				includedRegionCodes: countries,
+				sessionToken:        sessionToken,
+			} ).then( function ( result ) {
+				if ( thisRequest !== requestId ) { return; }
+				predictions = ( result.suggestions || [] )
+					.map( function ( s ) { return s.placePrediction; } )
+					.filter( Boolean )
+					.slice( 0, 5 );
+				render();
+			} ).catch( function () {
+				if ( thisRequest === requestId ) { close(); }
+			} );
+		}
+
+		function render() {
+			list.textContent = '';
+			activeIndex = -1;
+			input.removeAttribute( 'aria-activedescendant' );
+
+			if ( ! predictions.length ) { close(); return; }
+
+			predictions.forEach( function ( p, i ) {
+				var item = document.createElement( 'li' );
+				item.id            = 'hcqb-ac-item-' + i;
+				item.className     = 'hcqb-ac-item';
+				item.dataset.index = i;
+				item.setAttribute( 'role', 'option' );
+				item.setAttribute( 'aria-selected', 'false' );
+
+				var main = document.createElement( 'span' );
+				main.className   = 'hcqb-ac-item__main';
+				main.textContent = p.mainText ? p.mainText.text : p.text.text;
+				item.appendChild( main );
+
+				if ( p.secondaryText && p.secondaryText.text ) {
+					var secondary = document.createElement( 'span' );
+					secondary.className   = 'hcqb-ac-item__secondary';
+					secondary.textContent = p.secondaryText.text;
+					item.appendChild( secondary );
+				}
+
+				list.appendChild( item );
+			} );
+
+			// Google attribution — required when showing Places predictions.
+			var footer = document.createElement( 'li' );
+			footer.className   = 'hcqb-ac-attribution';
+			footer.textContent = 'Powered by Google';
+			footer.setAttribute( 'aria-hidden', 'true' );
+			list.appendChild( footer );
+
+			list.hidden = false;
+			input.setAttribute( 'aria-expanded', 'true' );
+		}
+
+		function setActive( index ) {
+			var items = list.querySelectorAll( '.hcqb-ac-item' );
+			items.forEach( function ( item, i ) {
+				var on = i === index;
+				item.classList.toggle( 'hcqb-ac-item--active', on );
+				item.setAttribute( 'aria-selected', on ? 'true' : 'false' );
+			} );
+			activeIndex = index;
+			if ( items[ index ] ) {
+				input.setAttribute( 'aria-activedescendant', items[ index ].id );
+			}
+		}
+
+		function close() {
+			list.hidden = true;
+			list.textContent = '';
+			activeIndex = -1;
+			input.setAttribute( 'aria-expanded', 'false' );
+			input.removeAttribute( 'aria-activedescendant' );
+		}
+
+		function select( index ) {
+			var prediction = predictions[ index ];
+			if ( ! prediction ) { return; }
+
+			input.value = prediction.text.text;
+			close();
+			requestId++; // Drop any in-flight suggestion request.
+
+			var place = prediction.toPlace();
+			// fetchFields() ends the billing session; start a new one next time.
+			sessionToken = null;
+
+			place.fetchFields( { fields: [ 'addressComponents', 'location' ] } ).then( function () {
+				if ( ! place.location ) { return; }
+				var components = ( place.addressComponents || [] ).map( function ( c ) {
+					return { types: c.types, long: c.longText, short: c.shortText };
+				} );
+				onPlaceSelected( components, place.location );
+			} ).catch( function () {} );
+		}
+	}
+
+	// Legacy Places Autocomplete (deprecated March 2025) — fallback only.
+	function initLegacyAutocomplete( searchInput, countries ) {
+		if ( ! google.maps.places || ! google.maps.places.Autocomplete ) { return; }
+
 		var autocomplete = new google.maps.places.Autocomplete( searchInput, {
-			fields:               [ 'address_components', 'geometry', 'name' ],
+			fields:               [ 'address_components', 'geometry' ],
 			componentRestrictions: { country: countries },
 		} );
 
 		autocomplete.addListener( 'place_changed', function () {
 			var place = autocomplete.getPlace();
 			if ( ! place || ! place.geometry ) { return; }
-
-			parseAndFillAddress( place );
-			updateMap( place.geometry.location );
-			calculateDistance( place.geometry.location );
+			var components = ( place.address_components || [] ).map( function ( c ) {
+				return { types: c.types, long: c.long_name, short: c.short_name };
+			} );
+			onPlaceSelected( components, place.geometry.location );
 		} );
+	}
+
+	// components: normalised [ { types, long, short } ]; location: LatLng.
+	function onPlaceSelected( components, location ) {
+		parseAndFillAddress( components, location );
+		updateMap( location );
+		calculateDistance( location );
 	}
 
 	// -------------------------------------------------------------------------
@@ -144,7 +340,7 @@
 	// Address parsing + field population
 	// -------------------------------------------------------------------------
 
-	function parseAndFillAddress( place ) {
+	function parseAndFillAddress( components, location ) {
 		var streetNumber = '';
 		var route        = '';
 		var locality     = '';
@@ -152,14 +348,14 @@
 		var postalCode   = '';
 		var country      = '';
 
-		( place.address_components || [] ).forEach( function ( comp ) {
-			var types = comp.types;
-			if ( types.indexOf( 'street_number' )               >= 0 ) { streetNumber = comp.long_name;  }
-			if ( types.indexOf( 'route' )                       >= 0 ) { route        = comp.long_name;  }
-			if ( types.indexOf( 'locality' )                    >= 0 ) { locality     = comp.long_name;  }
-			if ( types.indexOf( 'administrative_area_level_1' ) >= 0 ) { adminLevel   = comp.short_name; }
-			if ( types.indexOf( 'postal_code' )                 >= 0 ) { postalCode   = comp.long_name;  }
-			if ( types.indexOf( 'country' )                     >= 0 ) { country      = comp.short_name; }
+		components.forEach( function ( comp ) {
+			var types = comp.types || [];
+			if ( types.indexOf( 'street_number' )               >= 0 ) { streetNumber = comp.long;  }
+			if ( types.indexOf( 'route' )                       >= 0 ) { route        = comp.long;  }
+			if ( types.indexOf( 'locality' )                    >= 0 ) { locality     = comp.long;  }
+			if ( types.indexOf( 'administrative_area_level_1' ) >= 0 ) { adminLevel   = comp.short; }
+			if ( types.indexOf( 'postal_code' )                 >= 0 ) { postalCode   = comp.long;  }
+			if ( types.indexOf( 'country' )                     >= 0 ) { country      = comp.short; }
 		} );
 
 		var street = streetNumber ? ( streetNumber + ' ' + route ).trim() : route;
@@ -168,8 +364,8 @@
 		setField( 'hcqb-suburb',   locality   );
 		setField( 'hcqb-state',    adminLevel );
 		setField( 'hcqb-postcode', postalCode );
-		setField( 'hcqb-lat',      place.geometry.location.lat() );
-		setField( 'hcqb-lng',      place.geometry.location.lng() );
+		setField( 'hcqb-lat',      location.lat() );
+		setField( 'hcqb-lng',      location.lng() );
 
 		// Auto-select the matching phone prefix for the detected country.
 		if ( country && PHONE_PREFIXES[ country ] ) {

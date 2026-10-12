@@ -273,7 +273,7 @@ class HCQB_Plugin {
 		if ( $api_key ) {
 			wp_enqueue_script(
 				'google-maps-frontend',
-				'https://maps.googleapis.com/maps/api/js?key=' . rawurlencode( $api_key ) . '&libraries=places&callback=hcqbMapsInit',
+				'https://maps.googleapis.com/maps/api/js?key=' . rawurlencode( $api_key ) . '&libraries=places&loading=async&callback=hcqbMapsInit',
 				[ 'hcqb-google-maps' ],
 				null,
 				true

@@ -83,7 +83,7 @@ class HCQB_Settings {
 		if ( $api_key ) {
 			wp_enqueue_script(
 				'google-maps-api',
-				'https://maps.googleapis.com/maps/api/js?key=' . esc_attr( $api_key ) . '&libraries=places&callback=hcqbSettingsMapsInit',
+				'https://maps.googleapis.com/maps/api/js?key=' . esc_attr( $api_key ) . '&libraries=places&loading=async&callback=hcqbSettingsMapsInit',
 				[ 'hcqb-admin-settings' ],
 				null,
 				true
